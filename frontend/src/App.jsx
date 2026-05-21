@@ -733,6 +733,7 @@ export default function App() {
             onUpdateWater={handleUpdateWater}
             selectedDate={selectedDate}
             setSelectedDate={setSelectedDate}
+            apiSettings={apiSettings}
           />
         )}
 

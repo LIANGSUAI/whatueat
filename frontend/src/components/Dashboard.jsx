@@ -117,6 +117,25 @@ const estimateTextLocalMock = (text) => {
   return { name, calories, protein, carbs, fat, items };
 };
 
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('AI 估算请求超时，请检查网络或后端服务后重试。');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export default function Dashboard({ 
   meals, 
   onDeleteMeal, 
@@ -362,7 +381,7 @@ export default function Dashboard({
       let result;
       if (apiSettings?.mode === 'cloud') {
         const serverUrl = apiSettings.serverUrl || 'http://localhost:3000';
-        const response = await fetch(`${serverUrl}/api/ai/estimate-text`, {
+        const response = await fetchWithTimeout(`${serverUrl}/api/ai/estimate-text`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -413,7 +432,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
           requestBody.response_format = { type: 'json_object' };
         }
 
-        const apiResponse = await fetch(url, {
+        const apiResponse = await fetchWithTimeout(url, {
           method: 'POST',
           headers,
           body: JSON.stringify(requestBody)
