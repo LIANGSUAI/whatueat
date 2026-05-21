@@ -8,8 +8,23 @@ const getLocalDateString = (date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const toFiniteNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getRecordDate = (record) => {
+  if (!record) return '';
+  if (typeof record.timestamp === 'string') {
+    const parsed = new Date(record.timestamp);
+    if (!Number.isNaN(parsed.getTime())) {
+      return record.timestamp.split('T')[0];
+    }
+  }
+  return typeof record.date === 'string' ? record.date : '';
+};
+
 export default function Analytics({ meals: initialMeals = [], weightLogs: initialWeightLogs = [], userProfile: initialUserProfile = {}, waterLogs: initialWaterLogs = {} }) {
-  const [timeframe, setTimeframe] = useState('7days');
   const [expandedDay, setExpandedDay] = useState(null);
 
   const handleToggleDay = (dateStr) => {
@@ -20,6 +35,8 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   const weightLogs = Array.isArray(initialWeightLogs) ? initialWeightLogs : [];
   const userProfile = initialUserProfile || {};
   const waterLogs = initialWaterLogs || {};
+  const profileTdee = toFiniteNumber(userProfile?.tdee, 2200);
+  const profileWeight = toFiniteNumber(userProfile?.weight, 70);
 
   // If there is no meals and no weight logs, display empty state
   if (meals.length === 0 && weightLogs.length === 0) {
@@ -93,9 +110,9 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
         date: dateStr,
         dayName: dayName,
         intake: 0,
-        tdee: Number(userProfile?.tdee || 2200),
-        deficit: Number(userProfile?.tdee || 2200), // default to tdee
-        weight: Number(userProfile?.weight || 70.0),
+        tdee: profileTdee,
+        deficit: profileTdee,
+        weight: profileWeight,
         water: 0
       });
     }
@@ -104,19 +121,12 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
 
   const activeData = getPast7Days();
 
-  // Calculate current totals and merge today's current meals for calculations
-  const todayCalories = meals.reduce((sum, m) => sum + Number(m.calories || 0), 0);
-  const todayProtein = meals.reduce((sum, m) => sum + Number(m.protein || 0), 0);
-  const todayCarbs = meals.reduce((sum, m) => sum + Number(m.carbs || 0), 0);
-  const todayFat = meals.reduce((sum, m) => sum + Number(m.fat || 0), 0);
-
   // Populate active data with meals
   meals.forEach(m => {
-    if (!m || typeof m.timestamp !== 'string') return;
-    const mDateStr = m.timestamp.split('T')[0];
+    const mDateStr = getRecordDate(m);
     const dayData = activeData.find(d => d.fullDate === mDateStr);
     if (dayData) {
-      dayData.intake += Number(m.calories || 0);
+      dayData.intake += toFiniteNumber(m.calories, 0);
     }
   });
 
@@ -127,8 +137,8 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
 
   // Populate active data with water logs
   activeData.forEach(d => {
-    if (waterLogs && waterLogs[d.fullDate]) {
-      d.water = Number(waterLogs[d.fullDate]);
+    if (waterLogs && waterLogs[d.fullDate] !== undefined) {
+      d.water = toFiniteNumber(waterLogs[d.fullDate], 0);
     }
   });
 
@@ -136,23 +146,23 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   activeData.forEach(d => {
     // Find log for this day
     const wLog = weightLogs.find(w => {
-      if (w && typeof w.timestamp === 'string') {
-        return w.timestamp.split('T')[0] === d.fullDate;
-      }
-      return w && w.date === d.date;
+      const recordDate = getRecordDate(w);
+      return recordDate === d.fullDate || recordDate === d.date;
     });
     if (wLog) {
-      d.weight = Number(wLog.weight);
+      d.weight = toFiniteNumber(wLog.weight, profileWeight);
     } else {
       // Find the closest weight log in the past, or fall back to userProfile.weight
       const earlierLogs = weightLogs.filter(w => {
-        return w && w.timestamp && new Date(w.timestamp) <= new Date(d.fullDate + 'T23:59:59');
+        if (!w || !w.timestamp) return false;
+        const parsed = new Date(w.timestamp);
+        return !Number.isNaN(parsed.getTime()) && parsed <= new Date(d.fullDate + 'T23:59:59');
       });
       if (earlierLogs.length > 0) {
         earlierLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        d.weight = Number(earlierLogs[0].weight);
+        d.weight = toFiniteNumber(earlierLogs[0].weight, profileWeight);
       } else {
-        d.weight = Number(userProfile?.weight || 70.0);
+        d.weight = profileWeight;
       }
     }
   });
@@ -174,6 +184,7 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   const mealsInPast7Days = meals.filter(m => {
     if (!m || !m.timestamp) return false;
     const mDate = new Date(m.timestamp);
+    if (Number.isNaN(mDate.getTime())) return false;
     const timeDiff = new Date() - mDate;
     return timeDiff >= 0 && timeDiff <= 7 * 24 * 60 * 60 * 1000;
   });
@@ -185,9 +196,9 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
 
   const activeDaysCount = Math.max(1, uniqueMealDays.size);
 
-  const avgProtein = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + Number(m.protein || 0), 0) / activeDaysCount) : 0;
-  const avgCarbs = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + Number(m.carbs || 0), 0) / activeDaysCount) : 0;
-  const avgFat = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + Number(m.fat || 0), 0) / activeDaysCount) : 0;
+  const avgProtein = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + toFiniteNumber(m.protein, 0), 0) / activeDaysCount) : 0;
+  const avgCarbs = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + toFiniteNumber(m.carbs, 0), 0) / activeDaysCount) : 0;
+  const avgFat = hasMeals ? Math.round(mealsInPast7Days.reduce((sum, m) => sum + toFiniteNumber(m.fat, 0), 0) / activeDaysCount) : 0;
 
   const macroTotalKcal = (avgProtein * 4) + (avgCarbs * 4) + (avgFat * 9);
   
@@ -199,12 +210,12 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   let weeklyRateStr = null;
   if (weightLogs.length >= 2) {
     const sortedLogs = [...weightLogs]
-      .filter(w => w && w.timestamp)
+      .filter(w => w && w.timestamp && Number.isFinite(Number(w.weight)) && !Number.isNaN(new Date(w.timestamp).getTime()))
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     if (sortedLogs.length >= 2) {
       const firstLog = sortedLogs[0];
       const lastLog = sortedLogs[sortedLogs.length - 1];
-      const weightDiff = lastLog.weight - firstLog.weight;
+      const weightDiff = toFiniteNumber(lastLog.weight) - toFiniteNumber(firstLog.weight);
       const timeDiffMs = new Date(lastLog.timestamp) - new Date(firstLog.timestamp);
       const timeDiffDays = timeDiffMs / (1000 * 60 * 60 * 24);
       if (timeDiffDays > 0.01) {
@@ -228,7 +239,7 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   const chartHeight = height - paddingTop - paddingBottom;
 
   // Max value in chart
-  const maxCal = Math.max(...activeData.map(d => Math.max(d.intake, d.tdee))) * 1.15;
+  const maxCal = Math.max(1, ...activeData.map(d => Math.max(toFiniteNumber(d.intake, 0), toFiniteNumber(d.tdee, profileTdee)))) * 1.15;
 
   // Coordinates calculation
   const getX = (index) => paddingLeft + (index * (chartWidth / (activeData.length - 1)));
@@ -239,10 +250,11 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   const tdeePoints = activeData.map((d, i) => `${getX(i)},${getY(d.tdee)}`).join(' ');
 
   // Weight chart calculations
-  const weights = activeData.map(d => d.weight);
+  const weights = activeData.map(d => toFiniteNumber(d.weight, profileWeight));
   const minW = Math.min(...weights) - 0.5;
   const maxW = Math.max(...weights) + 0.5;
-  const getWeightY = (w) => height - paddingBottom - (((w - minW) / (maxW - minW)) * chartHeight);
+  const weightRange = Math.max(1, maxW - minW);
+  const getWeightY = (w) => height - paddingBottom - (((toFiniteNumber(w, profileWeight) - minW) / weightRange) * chartHeight);
   const weightPoints = activeData.map((d, i) => `${getX(i)},${getWeightY(d.weight)}`).join(' ');
 
   return (

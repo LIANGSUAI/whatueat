@@ -718,13 +718,18 @@ Do not return any markdown formatting outside of JSON, do not include any though
         {/* Quick Add Form Modal/Accordion */}
         {showQuickAdd && (
           <div className="glass-card quick-add-form-card">
-            <h4 className="quick-add-title">快速记录餐食</h4>
+            <div className="quick-add-header-row">
+              <h4 className="quick-add-title">快速记录餐食</h4>
+              <button type="button" className="quick-add-close-btn" onClick={() => setShowQuickAdd(false)} title="收起">
+                <X size={16} />
+              </button>
+            </div>
             <form onSubmit={handleQuickAddSubmit} className="quick-add-form">
               
               {/* AI Text Estimator Block */}
               <div className="form-group ai-text-estimator-block">
                 <label className="input-label-with-badge">
-                  <span className="label-text">AI 智能文本估算 (不知道卡路里？描述一下即可)</span>
+                  <span className="label-text">AI 文本估算</span>
                   <span className="badge-purple">✨ AI 估算</span>
                 </label>
                 <div className="ai-textarea-wrapper">
@@ -792,21 +797,21 @@ Do not return any markdown formatting outside of JSON, do not include any though
                 </div>
               </div>
 
-              <div className="form-row-grid">
-                <div className="form-group">
+              <div className="quick-entry-grid">
+                <div className="form-group quick-name-field">
                   <label>餐食名称</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="如：煎饼果子、美式咖啡" 
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="如：煎饼果子、美式咖啡"
                     value={quickMeal.name}
                     onChange={e => setQuickMeal({...quickMeal, name: e.target.value})}
-                    required 
+                    required
                   />
                 </div>
                 <div className="form-group">
-                  <label>用餐分类</label>
-                  <select 
+                  <label>分类</label>
+                  <select
                     className="form-input"
                     value={quickMeal.type}
                     onChange={e => setQuickMeal({...quickMeal, type: e.target.value})}
@@ -817,48 +822,48 @@ Do not return any markdown formatting outside of JSON, do not include any though
                     <option value="Snack">加餐</option>
                   </select>
                 </div>
-              </div>
-              <div className="form-row-four-cols">
                 <div className="form-group">
-                  <label>卡路里 (kcal)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    placeholder="0"
+                  <label>热量</label>
+                  <input
+                    type="number"
+                    className="form-input"
+                    placeholder="kcal"
                     value={quickMeal.calories}
                     onChange={e => setQuickMeal({...quickMeal, calories: e.target.value})}
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>蛋白质 (g)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    placeholder="0"
-                    value={quickMeal.protein}
-                    onChange={e => setQuickMeal({...quickMeal, protein: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>碳水 (g)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    placeholder="0"
-                    value={quickMeal.carbs}
-                    onChange={e => setQuickMeal({...quickMeal, carbs: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>脂肪 (g)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    placeholder="0"
-                    value={quickMeal.fat}
-                    onChange={e => setQuickMeal({...quickMeal, fat: e.target.value})}
-                  />
+                <div className="macro-inputs-inline">
+                  <div className="form-group">
+                    <label>蛋白</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="g"
+                      value={quickMeal.protein}
+                      onChange={e => setQuickMeal({...quickMeal, protein: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>碳水</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="g"
+                      value={quickMeal.carbs}
+                      onChange={e => setQuickMeal({...quickMeal, carbs: e.target.value})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>脂肪</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="g"
+                      value={quickMeal.fat}
+                      onChange={e => setQuickMeal({...quickMeal, fat: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="quick-add-actions">
@@ -1174,6 +1179,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
         .quick-add-form-card {
           margin-bottom: 1.5rem;
+          padding: 1rem 1.1rem;
           animation: slideDown 0.3s ease-out;
         }
         @keyframes slideDown {
@@ -1182,7 +1188,29 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
         .quick-add-title {
           font-size: 1rem;
-          margin-bottom: 1rem;
+          margin: 0;
+        }
+        .quick-add-header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+        }
+        .quick-add-close-btn {
+          width: 32px;
+          height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--border-glass);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.04);
+          color: var(--text-secondary);
+          cursor: pointer;
+        }
+        .quick-add-close-btn:hover {
+          color: var(--text-primary);
+          background: rgba(255, 255, 255, 0.08);
         }
         .quick-add-form .form-row-grid {
           display: grid;
@@ -1198,7 +1226,24 @@ Do not return any markdown formatting outside of JSON, do not include any though
           display: flex;
           justify-content: flex-end;
           gap: 0.75rem;
-          margin-top: 0.5rem;
+          margin-top: 0.75rem;
+        }
+        .quick-entry-grid {
+          display: grid;
+          grid-template-columns: minmax(220px, 2fr) minmax(110px, 0.7fr) minmax(110px, 0.7fr) minmax(240px, 1.6fr);
+          gap: 0.65rem;
+          align-items: end;
+        }
+        .quick-entry-grid .form-group,
+        .macro-inputs-inline .form-group,
+        .food-converter-block .form-group,
+        .ai-text-estimator-block.form-group {
+          margin-bottom: 0;
+        }
+        .macro-inputs-inline {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0.5rem;
         }
 
         .timeline-grid {
@@ -1621,8 +1666,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
           background: rgba(99, 102, 241, 0.04);
           border: 1px dashed rgba(99, 102, 241, 0.2);
           border-radius: 12px;
-          padding: 1rem;
-          margin-bottom: 1rem;
+          padding: 0.75rem;
+          margin-bottom: 0.65rem;
         }
         .input-label-with-badge {
           display: flex;
@@ -1645,21 +1690,23 @@ Do not return any markdown formatting outside of JSON, do not include any though
           box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
         }
         .ai-textarea-wrapper {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
           gap: 0.5rem;
-          position: relative;
+          align-items: end;
         }
         .ai-textarea {
-          min-height: 60px;
+          min-height: 42px;
+          height: 42px;
           font-size: 0.8rem;
           padding: 0.6rem;
-          resize: vertical;
+          resize: none;
         }
         .ai-estimate-button {
-          align-self: flex-end;
+          align-self: stretch;
           padding: 0.4rem 1rem !important;
           font-size: 0.78rem;
+          min-width: 120px;
         }
         .ai-error-msg {
           font-size: 0.72rem;
@@ -1671,8 +1718,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
           background: rgba(255, 255, 255, 0.02);
           border: 1px solid var(--border-glass);
           border-radius: 12px;
-          padding: 1rem;
-          margin-bottom: 1rem;
+          padding: 0.75rem;
+          margin-bottom: 0.65rem;
         }
         .food-converter-row {
           display: grid;
@@ -1708,6 +1755,27 @@ Do not return any markdown formatting outside of JSON, do not include any though
           .food-converter-row.has-portions {
             grid-template-columns: 1fr !important;
             gap: 0.5rem;
+          }
+          .quick-add-form-card {
+            padding: 0.85rem;
+          }
+          .quick-entry-grid,
+          .macro-inputs-inline {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+          }
+          .ai-textarea-wrapper {
+            grid-template-columns: 1fr;
+          }
+          .ai-textarea {
+            height: 54px;
+          }
+          .ai-estimate-button {
+            min-width: 0;
+          }
+          .quick-add-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
           }
         }
       `}</style>
