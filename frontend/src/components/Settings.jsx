@@ -59,17 +59,24 @@ export default function Settings({
     return Math.round(bmr * act);
   };
 
+  const calculatedTdee = calculateTDEE(
+    profile.gender,
+    Number(profile.weight),
+    Number(profile.height),
+    Number(profile.age),
+    Number(profile.activity)
+  );
+
   const handleProfileChange = (field, val) => {
     const updated = { ...profile, [field]: val };
-    const tdee = calculateTDEE(
-      updated.gender,
-      Number(updated.weight),
-      Number(updated.height),
-      Number(updated.age),
-      Number(updated.activity)
-    );
-    updated.tdee = tdee;
     setProfile(updated);
+  };
+
+  const handleUseCalculatedTdee = () => {
+    setProfile(prev => ({
+      ...prev,
+      tdee: calculatedTdee
+    }));
   };
 
   const handleProfileSubmit = (e) => {
@@ -217,8 +224,26 @@ export default function Settings({
 
             <div className="tdee-calc-output">
               <div className="calc-item">
-                <div className="calc-lbl">计算出的 TDEE (总每日能量消耗)</div>
-                <div className="calc-val text-success">{profile.tdee} <span className="calc-unit">kcal</span></div>
+                <div className="calc-lbl">根据档案估算的 TDEE</div>
+                <div className="calc-val text-success">{calculatedTdee} <span className="calc-unit">kcal</span></div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>每日总消耗热量 TDEE (kcal)</label>
+              <div className="tdee-manual-row">
+                <input
+                  type="number"
+                  className="form-input"
+                  value={profile.tdee}
+                  onChange={e => handleProfileChange('tdee', Number(e.target.value))}
+                  min="800"
+                  max="6000"
+                  step="10"
+                />
+                <button type="button" className="btn btn-secondary" onClick={handleUseCalculatedTdee}>
+                  使用估算值
+                </button>
               </div>
             </div>
 
@@ -241,8 +266,8 @@ export default function Settings({
             </div>
 
             <div className="target-intake-notice">
-              <span>🎯 每日目标摄入卡路里：<b>{Math.max(1200, profile.tdee - profile.deficit)} kcal</b></span>
-              {profile.tdee - profile.deficit < 1200 && (
+              <span>🎯 每日目标摄入卡路里：<b>{Math.max(1200, Number(profile.tdee) - Number(profile.deficit))} kcal</b></span>
+              {Number(profile.tdee) - Number(profile.deficit) < 1200 && (
                 <div className="alert-warning-text">⚠️ 您的摄入目标低于 1200 kcal，可能会引起基础代谢受损，建议调小热量缺口或配合增加运动量。</div>
               )}
             </div>
@@ -366,6 +391,18 @@ export default function Settings({
           font-size: 0.9rem;
           font-weight: 400;
           color: var(--text-secondary);
+        }
+        .tdee-manual-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 0.75rem;
+          align-items: center;
+        }
+        .tdee-manual-row .btn {
+          white-space: nowrap;
+          height: 100%;
+          padding-left: 1rem;
+          padding-right: 1rem;
         }
 
         .slider-input-range {
@@ -512,6 +549,15 @@ export default function Settings({
         }
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
+        }
+        @media (max-width: 768px) {
+          .form-row-two-cols,
+          .tdee-manual-row {
+            grid-template-columns: 1fr;
+          }
+          .weight-form-row {
+            flex-direction: column;
+          }
         }
       `}</style>
     </div>
