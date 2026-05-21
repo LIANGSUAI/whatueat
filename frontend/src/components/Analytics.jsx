@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Calendar, TrendingUp, Award, Activity, Circle } from 'lucide-react';
+import { Calendar, TrendingUp, Award, Activity, Circle, ChevronDown } from 'lucide-react';
 
-export default function Analytics({ meals = [], weightLogs = [], userProfile = {} }) {
+export default function Analytics({ meals = [], weightLogs = [], userProfile = {}, waterLogs = {} }) {
   const [timeframe, setTimeframe] = useState('7days');
 
   // If there is no meals and no weight logs, display empty state
@@ -61,13 +61,25 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
+      const fullDateStr = getLocalDateString(d);
       const dateStr = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('/', '-'); // e.g. "05-21"
+      
+      let dayName = '';
+      if (i === 0) dayName = '今天';
+      else if (i === 1) dayName = '昨天';
+      else {
+        dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+      }
+
       list.push({
+        fullDate: fullDateStr,
         date: dateStr,
+        dayName: dayName,
         intake: 0,
         tdee: Number(userProfile?.tdee || 2200),
         deficit: Number(userProfile?.tdee || 2200), // default to tdee
-        weight: Number(userProfile?.weight || 70.0)
+        weight: Number(userProfile?.weight || 70.0),
+        water: 0
       });
     }
     return list;
@@ -83,9 +95,9 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
 
   // Populate active data with meals
   meals.forEach(m => {
-    const mDate = new Date(m.timestamp);
-    const mDateStr = mDate.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('/', '-');
-    const dayData = activeData.find(d => d.date === mDateStr);
+    if (!m.timestamp) return;
+    const mDateStr = m.timestamp.split('T')[0];
+    const dayData = activeData.find(d => d.fullDate === mDateStr);
     if (dayData) {
       dayData.intake += Number(m.calories || 0);
     }
@@ -96,16 +108,28 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
     d.deficit = d.tdee - d.intake;
   });
 
+  // Populate active data with water logs
+  activeData.forEach(d => {
+    if (waterLogs && waterLogs[d.fullDate]) {
+      d.water = Number(waterLogs[d.fullDate]);
+    }
+  });
+
   // Populate active data with weight logs
   activeData.forEach(d => {
     // Find log for this day
-    const wLog = weightLogs.find(w => w.date === d.date);
+    const wLog = weightLogs.find(w => {
+      if (w.timestamp) {
+        return w.timestamp.split('T')[0] === d.fullDate;
+      }
+      return w.date === d.date;
+    });
     if (wLog) {
       d.weight = Number(wLog.weight);
     } else {
       // Find the closest weight log in the past, or fall back to userProfile.weight
       const earlierLogs = weightLogs.filter(w => {
-        return w.timestamp && new Date(w.timestamp) <= new Date();
+        return w.timestamp && new Date(w.timestamp) <= new Date(d.fullDate + 'T23:59:59');
       });
       if (earlierLogs.length > 0) {
         earlierLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -576,6 +600,113 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
         )}
       </div>
 
+      {/* Daily History Detail Accordion */}
+      <div className="glass-card daily-history-section">
+        <div className="section-title-row">
+          <Calendar size={18} className="text-primary" />
+          <h3>每日历史明细 (近7天)</h3>
+        </div>
+        
+        <div className="daily-history-list">
+          {activeData.map((d, index) => {
+            const dayMeals = meals.filter(m => m.timestamp && m.timestamp.split('T')[0] === d.fullDate);
+            const isExpanded = expandedDay === d.fullDate;
+            const isToday = d.fullDate === getLocalDateString(new Date());
+            const calorieDiff = d.intake - d.tdee;
+            const hasDeficit = calorieDiff <= 0;
+
+            return (
+              <div 
+                key={d.fullDate} 
+                className={`daily-history-item ${isExpanded ? 'expanded' : ''}`}
+              >
+                <div 
+                  className="daily-history-header"
+                  onClick={() => handleToggleDay(d.fullDate)}
+                >
+                  <div className="day-info">
+                    <span className="day-date">{d.date}</span>
+                    <span className={`day-name ${isToday ? 'today' : ''}`}>
+                      {d.dayName}
+                    </span>
+                  </div>
+                  
+                  <div className="day-stats-summary">
+                    <div className="day-stat-calories">
+                      摄入 <span>{d.intake}</span> / {d.tdee} kcal
+                    </div>
+                    
+                    <span className={`day-deficit-badge ${hasDeficit ? 'deficit' : 'surplus'}`}>
+                      {hasDeficit 
+                        ? `赤字 ${Math.abs(Math.round(calorieDiff))} kcal` 
+                        : `超出 ${Math.round(calorieDiff)} kcal`}
+                    </span>
+                    
+                    <div className="day-stat-water">
+                      💧 {d.water} ml
+                    </div>
+                  </div>
+                  
+                  <ChevronDown size={16} className="day-chevron" />
+                </div>
+                
+                {isExpanded && (
+                  <div className="daily-history-content">
+                    {dayMeals.length === 0 ? (
+                      <div className="empty-day-meals">
+                        📭 该日暂无餐食记录
+                      </div>
+                    ) : (
+                      <div className="expanded-meals-list">
+                        {dayMeals.map((m, mIdx) => (
+                          <div key={m.id || m._id || mIdx} className="expanded-meal-row">
+                            <div className="meal-left">
+                              {m.image && (
+                                <div className="meal-thumb-container">
+                                  <img 
+                                    src={m.image} 
+                                    alt={m.name} 
+                                    className="meal-thumb-img" 
+                                  />
+                                </div>
+                              )}
+                              <div className="meal-details">
+                                <div className="meal-name-row">
+                                  <span className="meal-badge-container">
+                                    <span className={`meal-badge ${
+                                      m.type === 'Breakfast' ? 'meal-badge-breakfast' :
+                                      m.type === 'Lunch' ? 'meal-badge-lunch' :
+                                      m.type === 'Dinner' ? 'meal-badge-dinner' : 'meal-badge-snack'
+                                    }`}>
+                                      {m.type === 'Breakfast' ? '早餐' :
+                                       m.type === 'Lunch' ? '午餐' :
+                                       m.type === 'Dinner' ? '晚餐' : '加餐'}
+                                    </span>
+                                  </span>
+                                  <span className="meal-name">{m.name}</span>
+                                </div>
+                                <div className="meal-macros">
+                                  蛋白质: {m.protein || 0}g | 碳水: {m.carbs || 0}g | 脂肪: {m.fat || 0}g
+                                </div>
+                              </div>
+                            </div>
+                            <div className="meal-right">
+                              <div className="meal-calories">
+                                {m.calories} <span>kcal</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <style>{`
         .analytics-summary-grid {
           display: grid;
@@ -663,8 +794,7 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
         }
         .svg-wrapper {
           width: 100%;
-          height: 100%;
-          max-height: 220px;
+          height: 200px;
         }
 
         .macro-ratio-card {
@@ -680,6 +810,11 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
           .macro-ratio-layout {
             grid-template-columns: 1fr;
             gap: 1rem;
+          }
+          .chart-header-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
           }
         }
 
@@ -784,6 +919,251 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
           0% { transform: scale(1); opacity: 0.8; }
           50% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        /* Daily history accordion styles */
+        .daily-history-section {
+          margin-top: 1.5rem;
+          padding: 1.5rem;
+        }
+        .section-title-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1.25rem;
+        }
+        .section-title-row h3 {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin: 0;
+        }
+        .daily-history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .daily-history-item {
+          border-radius: var(--border-radius-md);
+          border: 1px solid var(--border-glass);
+          background: rgba(255, 255, 255, 0.02);
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .daily-history-item:hover {
+          border-color: rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .daily-history-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1rem 1.25rem;
+          cursor: pointer;
+          user-select: none;
+        }
+        .day-info {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          min-width: 140px;
+        }
+        .day-date {
+          font-family: var(--font-heading);
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .day-name {
+          font-size: 0.75rem;
+          padding: 0.15rem 0.45rem;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.06);
+          color: var(--text-secondary);
+        }
+        .day-name.today {
+          background: rgba(16, 185, 129, 0.15);
+          color: var(--color-success);
+          font-weight: 600;
+        }
+        .day-stats-summary {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          flex: 1;
+          justify-content: flex-end;
+          padding-right: 1.5rem;
+        }
+        .day-stat-calories {
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+        }
+        .day-stat-calories span {
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .day-deficit-badge {
+          font-size: 0.75rem;
+          font-weight: 600;
+          padding: 0.2rem 0.5rem;
+          border-radius: var(--border-radius-sm);
+        }
+        .day-deficit-badge.deficit {
+          background: rgba(16, 185, 129, 0.12);
+          color: var(--color-success);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .day-deficit-badge.surplus {
+          background: rgba(239, 68, 68, 0.12);
+          color: var(--color-danger);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .day-stat-water {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+        }
+        .day-chevron {
+          transition: transform 0.3s ease;
+          color: var(--text-muted);
+        }
+        .daily-history-item.expanded .day-chevron {
+          transform: rotate(180deg);
+          color: var(--text-primary);
+        }
+        .daily-history-content {
+          border-top: 1px solid rgba(255, 255, 255, 0.04);
+          padding: 1.25rem;
+          background: rgba(0, 0, 0, 0.1);
+        }
+        .expanded-meals-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+        .expanded-meal-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.75rem 1rem;
+          border-radius: var(--border-radius-sm);
+          background: rgba(255, 255, 255, 0.01);
+          border: 1px solid rgba(255, 255, 255, 0.03);
+          transition: all 0.2s ease;
+        }
+        .expanded-meal-row:hover {
+          background: rgba(255, 255, 255, 0.02);
+          border-color: rgba(255, 255, 255, 0.05);
+        }
+        .meal-left {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+        .meal-thumb-container {
+          width: 42px;
+          height: 42px;
+          border-radius: var(--border-radius-sm);
+          overflow: hidden;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .meal-thumb-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.2s ease;
+        }
+        .meal-thumb-img:hover {
+          transform: scale(1.15);
+        }
+        .meal-details {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+        .meal-name-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .meal-name {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .meal-badge {
+          font-size: 0.65rem;
+          padding: 0.1rem 0.35rem;
+          border-radius: 4px;
+          font-weight: 600;
+        }
+        .meal-badge-breakfast { background: rgba(249, 115, 22, 0.12); color: var(--color-primary); }
+        .meal-badge-lunch { background: rgba(16, 185, 129, 0.12); color: var(--color-success); }
+        .meal-badge-dinner { background: rgba(99, 102, 241, 0.12); color: var(--color-info); }
+        .meal-badge-snack { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
+
+        .meal-macros {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+        }
+        .meal-right {
+          text-align: right;
+        }
+        .meal-calories {
+          font-family: var(--font-heading);
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .meal-calories span {
+          font-size: 0.75rem;
+          font-weight: 400;
+          color: var(--text-secondary);
+        }
+        .empty-day-meals {
+          text-align: center;
+          padding: 1.5rem 0;
+          color: var(--text-muted);
+          font-size: 0.8rem;
+        }
+
+        /* Mobile adaptation for daily history */
+        @media (max-width: 768px) {
+          .day-stats-summary {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding-right: 0.5rem;
+            justify-content: flex-start;
+          }
+          .daily-history-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+            position: relative;
+          }
+          .day-chevron {
+            position: absolute;
+            right: 1.25rem;
+            top: 1.25rem;
+          }
+          .expanded-meal-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+          .meal-right {
+            text-align: left;
+            width: 100%;
+            border-top: 1px dashed rgba(255,255,255,0.03);
+            padding-top: 0.5rem;
+          }
         }
       `}</style>
     </div>

@@ -12,9 +12,25 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
 
+  // Helper to format date as YYYY-MM-DD
+  const getLocalDateString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getMergedTimestamp = (dateStr) => {
+    const dateObj = new Date(dateStr);
+    const now = new Date();
+    dateObj.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+    return dateObj.toISOString();
+  };
+
   // Application States
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [meals, setMeals] = useState([]);
-  const [waterIntake, setWaterIntake] = useState(0);
+  const [waterLogs, setWaterLogs] = useState({});
   const [weightLogs, setWeightLogs] = useState([]);
   const [userProfile, setUserProfile] = useState({
     gender: 'male',
@@ -76,8 +92,7 @@ export default function App() {
     const username = (loadedApi && loadedApi.isLoggedIn) ? loadedApi.username : '';
     const profileKey = username ? `whatueat-profile-${username}` : 'whatueat-profile';
     const weightKey = username ? `whatueat-weight-logs-${username}` : 'whatueat-weight-logs';
-    const waterKey = username ? `whatueat-water-intake-${username}` : 'whatueat-water-intake';
-    const waterDateKey = username ? `whatueat-water-date-${username}` : 'whatueat-water-date';
+    const waterLogsKey = username ? `whatueat-water-logs-${username}` : 'whatueat-water-logs';
 
     // Load Profile
     const savedProfile = localStorage.getItem(profileKey);
@@ -103,16 +118,17 @@ export default function App() {
       setWeightLogs([]);
     }
 
-    // Load Water (resets daily, we check date)
-    const savedWaterDate = localStorage.getItem(waterDateKey);
-    const todayStr = new Date().toDateString();
-    if (savedWaterDate === todayStr) {
-      const savedWater = localStorage.getItem(waterKey);
-      if (savedWater) setWaterIntake(Number(savedWater));
+    // Load Water Logs
+    const savedWaterLogs = localStorage.getItem(waterLogsKey);
+    if (savedWaterLogs) {
+      try {
+        setWaterLogs(JSON.parse(savedWaterLogs));
+      } catch (e) {
+        console.error('Failed to parse water logs:', e);
+        setWaterLogs({});
+      }
     } else {
-      localStorage.setItem(waterDateKey, todayStr);
-      localStorage.setItem(waterKey, '0');
-      setWaterIntake(0);
+      setWaterLogs({});
     }
 
     // Load Meals (Local vs Cloud)
@@ -206,16 +222,16 @@ export default function App() {
       const savedWeight = localStorage.getItem(`whatueat-weight-logs-${username}`);
       setWeightLogs(savedWeight ? JSON.parse(savedWeight) : []);
 
-      // Load User Water
-      const savedWaterDate = localStorage.getItem(`whatueat-water-date-${username}`);
-      const todayStr = new Date().toDateString();
-      if (savedWaterDate === todayStr) {
-        const savedWater = localStorage.getItem(`whatueat-water-intake-${username}`);
-        setWaterIntake(savedWater ? Number(savedWater) : 0);
+      // Load User Water Logs
+      const savedWaterLogs = localStorage.getItem(`whatueat-water-logs-${username}`);
+      if (savedWaterLogs) {
+        try {
+          setWaterLogs(JSON.parse(savedWaterLogs));
+        } catch (e) {
+          setWaterLogs({});
+        }
       } else {
-        localStorage.setItem(`whatueat-water-date-${username}`, todayStr);
-        localStorage.setItem(`whatueat-water-intake-${username}`, '0');
-        setWaterIntake(0);
+        setWaterLogs({});
       }
 
       // Load User Meals from Cloud
@@ -244,16 +260,16 @@ export default function App() {
       const savedWeight = localStorage.getItem('whatueat-weight-logs');
       setWeightLogs(savedWeight ? JSON.parse(savedWeight) : []);
 
-      // Load Guest Water
-      const savedWaterDate = localStorage.getItem('whatueat-water-date');
-      const todayStr = new Date().toDateString();
-      if (savedWaterDate === todayStr) {
-        const savedWater = localStorage.getItem('whatueat-water-intake');
-        setWaterIntake(savedWater ? Number(savedWater) : 0);
+      // Load Guest Water Logs
+      const savedWaterLogs = localStorage.getItem('whatueat-water-logs');
+      if (savedWaterLogs) {
+        try {
+          setWaterLogs(JSON.parse(savedWaterLogs));
+        } catch (e) {
+          setWaterLogs({});
+        }
       } else {
-        localStorage.setItem('whatueat-water-date', todayStr);
-        localStorage.setItem('whatueat-water-intake', '0');
-        setWaterIntake(0);
+        setWaterLogs({});
       }
 
       // Reload local meals or clear meals
@@ -318,9 +334,26 @@ export default function App() {
 
   // 6. Add Meal Log
   const handleAddMeal = async (newMeal) => {
+    // Merge timestamp with selectedDate if it's a new meal
+    const mealTimestamp = newMeal.timestamp 
+      ? (() => {
+          // If the timestamp is already on selectedDate, keep it. Otherwise update its date portion.
+          const selectedPrefix = selectedDate; // YYYY-MM-DD
+          const mealPrefix = newMeal.timestamp.split('T')[0];
+          if (selectedPrefix !== mealPrefix) {
+            const dateObj = new Date(selectedDate);
+            const originalTime = new Date(newMeal.timestamp);
+            dateObj.setHours(originalTime.getHours(), originalTime.getMinutes(), originalTime.getSeconds(), originalTime.getMilliseconds());
+            return dateObj.toISOString();
+          }
+          return newMeal.timestamp;
+        })()
+      : getMergedTimestamp(selectedDate);
+
     // Generate temporary ID
     const mealWithId = {
       ...newMeal,
+      timestamp: mealTimestamp,
       id: Date.now().toString()
     };
 
@@ -407,13 +440,16 @@ export default function App() {
   };
 
   // 8. Water Intake Logger
-  const handleUpdateWater = (amount) => {
-    setWaterIntake(amount);
+  const handleUpdateWater = (amount, dateStr = selectedDate) => {
+    const updatedWaterLogs = {
+      ...waterLogs,
+      [dateStr]: amount
+    };
+    setWaterLogs(updatedWaterLogs);
+    
     const username = apiSettings.isLoggedIn ? apiSettings.username : '';
-    const waterKey = username ? `whatueat-water-intake-${username}` : 'whatueat-water-intake';
-    const waterDateKey = username ? `whatueat-water-date-${username}` : 'whatueat-water-date';
-    localStorage.setItem(waterKey, amount.toString());
-    localStorage.setItem(waterDateKey, new Date().toDateString());
+    const waterLogsKey = username ? `whatueat-water-logs-${username}` : 'whatueat-water-logs';
+    localStorage.setItem(waterLogsKey, JSON.stringify(updatedWaterLogs));
   };
 
   // 9. Weight Logger
@@ -693,8 +729,10 @@ export default function App() {
             onAddManualMeal={handleAddMeal}
             tdee={userProfile.tdee}
             targetDeficit={userProfile.deficit}
-            waterIntake={waterIntake}
+            waterIntake={waterLogs[selectedDate] || 0}
             onUpdateWater={handleUpdateWater}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
           />
         )}
 
@@ -710,6 +748,7 @@ export default function App() {
             meals={meals}
             weightLogs={weightLogs}
             userProfile={userProfile}
+            waterLogs={waterLogs}
           />
         )}
 
