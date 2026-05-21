@@ -1,8 +1,25 @@
 import React, { useState } from 'react';
 import { Calendar, TrendingUp, Award, Activity, Circle, ChevronDown } from 'lucide-react';
 
-export default function Analytics({ meals = [], weightLogs = [], userProfile = {}, waterLogs = {} }) {
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export default function Analytics({ meals: initialMeals = [], weightLogs: initialWeightLogs = [], userProfile: initialUserProfile = {}, waterLogs: initialWaterLogs = {} }) {
   const [timeframe, setTimeframe] = useState('7days');
+  const [expandedDay, setExpandedDay] = useState(null);
+
+  const handleToggleDay = (dateStr) => {
+    setExpandedDay(expandedDay === dateStr ? null : dateStr);
+  };
+
+  const meals = Array.isArray(initialMeals) ? initialMeals : [];
+  const weightLogs = Array.isArray(initialWeightLogs) ? initialWeightLogs : [];
+  const userProfile = initialUserProfile || {};
+  const waterLogs = initialWaterLogs || {};
 
   // If there is no meals and no weight logs, display empty state
   if (meals.length === 0 && weightLogs.length === 0) {
@@ -95,7 +112,7 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
 
   // Populate active data with meals
   meals.forEach(m => {
-    if (!m.timestamp) return;
+    if (!m || typeof m.timestamp !== 'string') return;
     const mDateStr = m.timestamp.split('T')[0];
     const dayData = activeData.find(d => d.fullDate === mDateStr);
     if (dayData) {
@@ -119,17 +136,17 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
   activeData.forEach(d => {
     // Find log for this day
     const wLog = weightLogs.find(w => {
-      if (w.timestamp) {
+      if (w && typeof w.timestamp === 'string') {
         return w.timestamp.split('T')[0] === d.fullDate;
       }
-      return w.date === d.date;
+      return w && w.date === d.date;
     });
     if (wLog) {
       d.weight = Number(wLog.weight);
     } else {
       // Find the closest weight log in the past, or fall back to userProfile.weight
       const earlierLogs = weightLogs.filter(w => {
-        return w.timestamp && new Date(w.timestamp) <= new Date(d.fullDate + 'T23:59:59');
+        return w && w.timestamp && new Date(w.timestamp) <= new Date(d.fullDate + 'T23:59:59');
       });
       if (earlierLogs.length > 0) {
         earlierLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -155,12 +172,14 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
 
   // Calculate historical macro averages using only actual meals
   const mealsInPast7Days = meals.filter(m => {
+    if (!m || !m.timestamp) return false;
     const mDate = new Date(m.timestamp);
     const timeDiff = new Date() - mDate;
     return timeDiff >= 0 && timeDiff <= 7 * 24 * 60 * 60 * 1000;
   });
 
   const uniqueMealDays = new Set(mealsInPast7Days.map(m => {
+    if (!m || !m.timestamp) return '';
     return new Date(m.timestamp).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }).replace('/', '-');
   }));
 
@@ -180,7 +199,7 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
   let weeklyRateStr = null;
   if (weightLogs.length >= 2) {
     const sortedLogs = [...weightLogs]
-      .filter(w => w.timestamp)
+      .filter(w => w && w.timestamp)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     if (sortedLogs.length >= 2) {
       const firstLog = sortedLogs[0];
@@ -609,7 +628,7 @@ export default function Analytics({ meals = [], weightLogs = [], userProfile = {
         
         <div className="daily-history-list">
           {activeData.map((d, index) => {
-            const dayMeals = meals.filter(m => m.timestamp && m.timestamp.split('T')[0] === d.fullDate);
+            const dayMeals = meals.filter(m => m && typeof m.timestamp === 'string' && m.timestamp.split('T')[0] === d.fullDate);
             const isExpanded = expandedDay === d.fullDate;
             const isToday = d.fullDate === getLocalDateString(new Date());
             const calorieDiff = d.intake - d.tdee;

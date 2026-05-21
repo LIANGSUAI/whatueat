@@ -748,7 +748,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
 
               {/* Portion Calculator Block */}
               <div className="food-converter-block">
-                <div className="form-row-grid" style={{ gridTemplateColumns: quickMeal.selectedFood ? '1.5fr 1fr 1fr' : '1fr' }}>
+                <div className={`food-converter-row ${quickMeal.selectedFood ? 'has-portions' : ''}`}>
                   <div className="form-group">
                     <label>选择常见食物估算</label>
                     <select
@@ -1674,6 +1674,14 @@ Do not return any markdown formatting outside of JSON, do not include any though
           padding: 1rem;
           margin-bottom: 1rem;
         }
+        .food-converter-row {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
+        .food-converter-row.has-portions {
+          grid-template-columns: 1.5fr 1fr 1fr;
+        }
         .form-row-grid2 {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1697,6 +1705,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
             width: 16px;
             height: 16px;
           }
+          .food-converter-row.has-portions {
+            grid-template-columns: 1fr !important;
+            gap: 0.5rem;
+          }
         }
       `}</style>
 
@@ -1718,7 +1730,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
               
               {/* Edit Portion Calculator Block */}
               <div className="food-converter-block" style={{ padding: '0.75rem', marginBottom: '0.5rem' }}>
-                <div className="form-row-grid" style={{ gridTemplateColumns: editingMeal.selectedFood ? '1.5fr 1fr 1fr' : '1fr', gap: '0.5rem' }}>
+                <div className={`food-converter-row ${editingMeal.selectedFood ? 'has-portions' : ''}`} style={{ gap: '0.5rem' }}>
                   <div className="form-group">
                     <label>常见食物微调</label>
                     <select
