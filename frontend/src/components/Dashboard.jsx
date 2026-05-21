@@ -117,6 +117,17 @@ const estimateTextLocalMock = (text) => {
   return { name, calories, protein, carbs, fat, items };
 };
 
+const inferMealTypeFromText = (text, fallbackType) => {
+  const normalized = String(text || '').toLowerCase();
+
+  if (/(夜宵|宵夜|加餐|零食|点心|下午茶|snack)/.test(normalized)) return 'Snack';
+  if (/(早餐|早饭|早上|早晨|上午|清晨|breakfast)/.test(normalized)) return 'Breakfast';
+  if (/(午餐|午饭|中午|午间|正午|lunch)/.test(normalized)) return 'Lunch';
+  if (/(晚餐|晚饭|晚上|傍晚|晚间|dinner|supper)/.test(normalized)) return 'Dinner';
+
+  return fallbackType;
+};
+
 const fetchWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -365,6 +376,7 @@ export default function Dashboard({
             protein: result.protein.toString(),
             carbs: result.carbs.toString(),
             fat: result.fat.toString(),
+            type: inferMealTypeFromText(aiText, prev.type),
             selectedFood: ''
           }));
           setAiText('');
@@ -461,6 +473,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
           protein: result.protein.toString(),
           carbs: result.carbs.toString(),
           fat: result.fat.toString(),
+          type: inferMealTypeFromText(aiText, prev.type),
           selectedFood: ''
         }));
         setAiText('');
