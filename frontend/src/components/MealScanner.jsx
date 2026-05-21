@@ -52,6 +52,31 @@ const MOCK_MEALS_DATABASE = [
   }
 ];
 
+const createMealThumbnail = (source, maxSize = 320, quality = 0.65) => {
+  if (!source) return Promise.resolve(null);
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const width = Math.max(1, Math.round(img.width * scale));
+      const height = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('缩略图生成失败'));
+    img.src = source;
+  });
+};
+
 export default function MealScanner({ 
   onSaveMeal, 
   apiSettings 
@@ -62,6 +87,7 @@ export default function MealScanner({
   const [scanResult, setScanResult] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editedResult, setEditedResult] = useState(null);
+  const [saving, setSaving] = useState(false);
   const getMealTypeByTime = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 10) return 'Breakfast';
@@ -250,19 +276,30 @@ Do not return any markdown formatting outside of JSON, do not include any though
     setEditedResult(updated);
   };
 
-  const handleSave = () => {
-    if (!editedResult) return;
-    onSaveMeal({
-      ...editedResult,
-      image: imagePreview,
-      type: mealType,
-      timestamp: new Date().toISOString()
-    });
-    // Reset scanner state
-    setImage(null);
-    setImagePreview(null);
-    setScanResult(null);
-    setEditedResult(null);
+  const handleSave = async () => {
+    if (!editedResult || saving) return;
+    setSaving(true);
+    setError(null);
+
+    try {
+      const thumbnail = await createMealThumbnail(imagePreview);
+      onSaveMeal({
+        ...editedResult,
+        image: thumbnail,
+        type: mealType,
+        timestamp: new Date().toISOString()
+      });
+      // Reset scanner state
+      setImage(null);
+      setImagePreview(null);
+      setScanResult(null);
+      setEditedResult(null);
+    } catch (err) {
+      console.error(err);
+      setError('保存前生成缩略图失败，请重新选择图片后再试。');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const triggerReset = () => {
@@ -509,12 +546,12 @@ Do not return any markdown formatting outside of JSON, do not include any though
 
               {/* Action Buttons */}
               <div className="scanned-actions-row">
-                <button className="btn btn-secondary" onClick={triggerReset}>
+                <button className="btn btn-secondary" onClick={triggerReset} disabled={saving}>
                   重新拍摄 / 取消
                 </button>
-                <button className="btn btn-primary btn-glow-green" onClick={handleSave}>
+                <button className="btn btn-primary btn-glow-green" onClick={handleSave} disabled={saving}>
                   <Check size={16} />
-                  <span>保存并打卡</span>
+                  <span>{saving ? '正在保存...' : '保存并打卡'}</span>
                 </button>
               </div>
             </div>
