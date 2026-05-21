@@ -157,7 +157,7 @@ export default function Settings({
           </h3>
 
           <form onSubmit={handleProfileSubmit} className="profile-form">
-            <div className="form-row-two-cols">
+            <div className="profile-basics-grid">
               <div className="form-group">
                 <label>性别</label>
                 <select 
@@ -180,9 +180,6 @@ export default function Settings({
                   max="120"
                 />
               </div>
-            </div>
-
-            <div className="form-row-two-cols">
               <div className="form-group">
                 <label>身高 (cm)</label>
                 <input 
@@ -357,6 +354,14 @@ export default function Settings({
           grid-template-columns: 1fr 1fr;
           gap: 1rem;
         }
+        .profile-basics-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 0.75rem;
+        }
+        .profile-form .form-group {
+          margin-bottom: 0.85rem;
+        }
         .w-full {
           width: 100%;
         }
@@ -368,8 +373,8 @@ export default function Settings({
           background: rgba(255, 255, 255, 0.02);
           border: 1px solid var(--border-glass);
           border-radius: var(--border-radius-sm);
-          padding: 1rem;
-          margin-bottom: 1.25rem;
+          padding: 0.75rem 1rem;
+          margin-bottom: 0.85rem;
         }
         .calc-item {
           display: flex;
@@ -383,9 +388,9 @@ export default function Settings({
         }
         .calc-val {
           font-family: var(--font-heading);
-          font-size: 2rem;
+          font-size: 1.55rem;
           font-weight: 800;
-          margin-top: 0.25rem;
+          margin-top: 0.1rem;
         }
         .calc-unit {
           font-size: 0.9rem;
@@ -552,11 +557,29 @@ export default function Settings({
         }
         @media (max-width: 768px) {
           .form-row-two-cols,
+          .profile-basics-grid,
           .tdee-manual-row {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.6rem;
+          }
+          .profile-form .form-group {
+            margin-bottom: 0.65rem;
+          }
+          .tdee-manual-row .btn {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
           }
           .weight-form-row {
             flex-direction: column;
+          }
+        }
+        @media (max-width: 420px) {
+          .profile-basics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .form-row-two-cols,
+          .tdee-manual-row {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

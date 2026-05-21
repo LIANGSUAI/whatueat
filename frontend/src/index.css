@@ -223,13 +223,16 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--bg-input);
-  border: 1px solid var(--border-glass);
+  border: 1px solid rgba(92, 102, 122, 0.28);
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: 0.95rem;
   outline: none;
   transition: all 0.2s ease;
+}
+.dark-theme .form-input {
+  border-color: rgba(255, 255, 255, 0.16);
 }
 .form-input:focus {
   border-color: var(--color-info);

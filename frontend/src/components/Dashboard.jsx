@@ -1785,16 +1785,31 @@ Do not return any markdown formatting outside of JSON, do not include any though
             height: 16px;
           }
           .food-converter-row.has-portions {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: 1.4fr 0.8fr 1fr !important;
             gap: 0.5rem;
           }
           .quick-add-form-card {
             padding: 0.85rem;
           }
-          .quick-entry-grid,
-          .macro-inputs-inline {
-            grid-template-columns: 1fr;
+          .quick-entry-grid {
+            grid-template-columns: minmax(0, 1.3fr) minmax(92px, 0.7fr);
             gap: 0.5rem;
+          }
+          .quick-name-field,
+          .macro-inputs-inline {
+            grid-column: 1 / -1;
+          }
+          .macro-inputs-inline {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.4rem;
+          }
+          .quick-add-form .form-input {
+            padding: 0.62rem 0.7rem;
+            font-size: 0.86rem;
+          }
+          .quick-add-form label {
+            margin-bottom: 0.35rem;
+            font-size: 0.72rem;
           }
           .ai-textarea-wrapper {
             grid-template-columns: 1fr;
@@ -1808,6 +1823,15 @@ Do not return any markdown formatting outside of JSON, do not include any though
           .quick-add-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
+          }
+        }
+        @media (max-width: 420px) {
+          .food-converter-row.has-portions,
+          .quick-entry-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .macro-inputs-inline {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
       `}</style>
