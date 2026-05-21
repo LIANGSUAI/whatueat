@@ -687,10 +687,13 @@ export default function App() {
         {/* Utility theme switcher */}
         <div className="header-utilities">
           {apiSettings.isLoggedIn && (
-            <div className="user-nav-badge flex-items">
-              <span className="user-nav-name">👤 {apiSettings.username}</span>
+            <div className="user-nav-badge">
+              <span className="user-nav-name">
+                <User size={14} />
+                <span>{apiSettings.username}</span>
+              </span>
               <button 
-                className="logout-nav-btn btn btn-danger btn-sm" 
+                className="logout-nav-btn" 
                 onClick={() => {
                   const updatedApi = {
                     ...apiSettings,
@@ -700,16 +703,8 @@ export default function App() {
                   handleSaveApiSettings(updatedApi);
                 }}
                 title="退出登录"
-                style={{ 
-                  padding: '4px 8px', 
-                  fontSize: '0.72rem', 
-                  borderRadius: '8px',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  minWidth: 'max-content'
-                }}
               >
-                <span style={{ whiteSpace: 'nowrap' }}>退出</span>
+                退出
               </button>
             </div>
           )}
@@ -800,32 +795,60 @@ export default function App() {
         .user-nav-badge {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.35rem;
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid var(--border-glass);
-          padding: 0.3rem 0.6rem;
+          padding: 0.25rem 0.35rem 0.25rem 0.5rem;
           border-radius: 20px;
-          margin-right: 0.5rem;
           white-space: nowrap;
-          flex-shrink: 0;
+          flex: 0 1 auto;
+          min-width: 0;
+          max-width: 150px;
         }
         .user-nav-name {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          min-width: 0;
           font-size: 0.8rem;
           font-weight: 600;
           color: var(--text-primary);
-          max-width: 80px;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+        .user-nav-name svg {
+          flex: 0 0 auto;
+          color: var(--text-secondary);
+        }
+        .user-nav-name span {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
         .logout-nav-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 26px;
+          padding: 0 0.45rem;
+          border: none;
+          border-radius: 8px;
+          background: linear-gradient(135deg, var(--color-danger) 0%, #b81730 100%);
+          color: white;
+          font-size: 0.72rem;
+          font-weight: 700;
           white-space: nowrap;
-          flex-shrink: 0;
+          flex: 0 0 auto;
+          cursor: pointer;
         }
-        .flex-items {
+        .header-utilities {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          justify-content: flex-end;
+          gap: 0.45rem;
+          flex: 0 1 auto;
+          min-width: 0;
+          flex-wrap: nowrap;
         }
 
         .app-root-layout {
@@ -989,21 +1012,37 @@ export default function App() {
             display: none;
           }
           .header-utilities {
-            flex-shrink: 0;
+            flex: 0 0 auto;
             gap: 0.25rem;
+            min-width: 0;
           }
           .user-nav-badge {
             gap: 0.25rem;
-            padding: 0.2rem 0.4rem;
-            margin-right: 0.25rem;
-            flex-shrink: 0;
+            padding: 0.18rem 0.25rem 0.18rem 0.35rem;
+            max-width: 112px;
+            flex-shrink: 1;
           }
           .user-nav-name {
-            max-width: 50px;
             font-size: 0.7rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+          }
+          .user-nav-name svg {
+            width: 12px;
+            height: 12px;
+          }
+          .logout-nav-btn {
+            height: 22px;
+            padding: 0 0.32rem;
+            font-size: 0.65rem;
+            border-radius: 7px;
+          }
+          .theme-toggle-btn {
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+          }
+          .theme-toggle-btn svg {
+            width: 17px;
+            height: 17px;
           }
           .desktop-nav-tabs {
             display: none;
