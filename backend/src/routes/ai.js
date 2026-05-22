@@ -1,4 +1,10 @@
 import express from 'express';
+import {
+  IMAGE_ESTIMATION_SYSTEM_PROMPT,
+  TEXT_ESTIMATION_SYSTEM_PROMPT,
+  applyImageNutritionLabelRules,
+  applyNutritionLabelRules
+} from '../utils/nutritionEstimate.js';
 
 const router = express.Router();
 
@@ -49,19 +55,7 @@ router.post('/scan', async (req, res) => {
     const aiApiKey = process.env.AI_API_KEY;
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
-    const systemPrompt = `You are a professional nutrition expert. Analyze the food image provided and estimate the dish name, estimated weight of each ingredient, calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
-Return strictly a valid JSON object in this format:
-{
-  "name": "Dish name in Chinese",
-  "calories": total_calories_number,
-  "protein": total_protein_grams_number,
-  "carbs": total_carbs_grams_number,
-  "fat": total_fat_grams_number,
-  "items": [
-    { "name": "Ingredient name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
-  ]
-}
-Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
+    const systemPrompt = IMAGE_ESTIMATION_SYSTEM_PROMPT;
 
     let response;
     let requestBody;
@@ -139,7 +133,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
     const rawContent = data.choices[0].message.content;
     const cleanContent = cleanJsonResponse(rawContent);
 
-    const parsedJson = JSON.parse(cleanContent);
+    const parsedJson = applyImageNutritionLabelRules(JSON.parse(cleanContent));
     return res.json({ result: parsedJson });
 
   } catch (err) {
@@ -164,19 +158,7 @@ router.post('/estimate-text', async (req, res) => {
     const aiApiKey = process.env.AI_API_KEY;
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
-    const systemPrompt = `You are a professional nutrition expert. Analyze the food description text provided and estimate the summary dish name, estimated weight of each ingredient/food item, total calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
-Return strictly a valid JSON object in this format:
-{
-  "name": "Summary of the meals in Chinese (e.g. 红烧肉配米饭)",
-  "calories": total_calories_number,
-  "protein": total_protein_grams_number,
-  "carbs": total_carbs_grams_number,
-  "fat": total_fat_grams_number,
-  "items": [
-    { "name": "Ingredient or food name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
-  ]
-}
-Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
+    const systemPrompt = TEXT_ESTIMATION_SYSTEM_PROMPT;
 
     let response;
     let requestBody;
@@ -274,7 +256,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         ];
       }
 
-      return res.json({ result: { name, calories, protein, carbs, fat, items } });
+      return res.json({ result: applyNutritionLabelRules(text, { name, calories, protein, carbs, fat, items }) });
     }
 
     const apiResponse = await fetchWithTimeout(url, {
@@ -292,7 +274,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
     const rawContent = data.choices[0].message.content;
     const cleanContent = cleanJsonResponse(rawContent);
 
-    const parsedJson = JSON.parse(cleanContent);
+    const parsedJson = applyNutritionLabelRules(text, JSON.parse(cleanContent));
     return res.json({ result: parsedJson });
 
   } catch (err) {
