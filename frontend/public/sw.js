@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whatueat-pwa-v4';
+const CACHE_NAME = 'whatueat-pwa-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -49,12 +49,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    fetch(request)
-      .then((response) => {
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request).then((response) => {
         const responseCopy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, responseCopy));
         return response;
-      })
-      .catch(() => caches.match(request))
+      });
+    })
   );
 });

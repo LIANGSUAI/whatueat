@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, Sparkles, Check, Edit3, Save, RefreshCw, AlertCircle } from 'lucide-react';
-import { IMAGE_ESTIMATION_SYSTEM_PROMPT, applyImageNutritionLabelRules } from '../utils/nutritionEstimate';
 
 const MOCK_MEALS_DATABASE = [
   {
@@ -221,7 +220,19 @@ export default function MealScanner({
           'Authorization': `Bearer ${apiSettings.apiKey}`
         };
 
-        const systemPrompt = IMAGE_ESTIMATION_SYSTEM_PROMPT;
+        const systemPrompt = `You are a professional nutrition expert. Analyze the food image provided and estimate the dish name, estimated weight of each ingredient, calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
+Return strictly a valid JSON object in this format:
+{
+  "name": "Dish name in Chinese",
+  "calories": total_calories_number,
+  "protein": total_protein_grams_number,
+  "carbs": total_carbs_grams_number,
+  "fat": total_fat_grams_number,
+  "items": [
+    { "name": "Ingredient name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
+  ]
+}
+Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
 
         const requestBody = {
           model: isQwen ? 'qwen3.5-omni-flash' : 'gpt-4o-mini',
@@ -253,14 +264,10 @@ export default function MealScanner({
       
       let parsedJson;
       if (apiSettings.mode === 'cloud') {
-        parsedJson = applyImageNutritionLabelRules(data.result || data);
+        parsedJson = data.result;
       } else {
         const text = data.choices[0].message.content;
-        let cleaned = text.trim();
-        if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
-        else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
-        if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
-        parsedJson = applyImageNutritionLabelRules(JSON.parse(cleaned.trim()));
+        parsedJson = JSON.parse(text);
       }
 
       setScanResult(parsedJson);
@@ -456,9 +463,6 @@ export default function MealScanner({
                   </div>
                 ) : (
                   <h2 className="scanned-meal-title">{editedResult.name}</h2>
-                )}
-                {editedResult.estimationNote && (
-                  <p className="scanned-estimation-note">{editedResult.estimationNote}</p>
                 )}
               </div>
 
@@ -831,12 +835,6 @@ export default function MealScanner({
         }
         .meal-title-display-group {
           margin-bottom: 0.75rem;
-        }
-        .scanned-estimation-note {
-          margin: -0.5rem 0 0.85rem;
-          color: var(--text-secondary);
-          font-size: 0.78rem;
-          line-height: 1.45;
         }
         .margin-none {
           margin: 0 !important;

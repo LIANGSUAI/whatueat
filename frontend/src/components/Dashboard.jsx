@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Edit2, Flame, TrendingDown, Target, Droplet, Coffee, Utensils, Moon, Carrot, X, ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
-import { TEXT_ESTIMATION_SYSTEM_PROMPT, applyNutritionLabelRules } from '../utils/nutritionEstimate';
 
 const COMMON_FOODS = [
   {
@@ -189,7 +188,6 @@ export default function Dashboard({
   const [aiText, setAiText] = useState('');
   const [aiEstimating, setAiEstimating] = useState(false);
   const [aiError, setAiError] = useState('');
-  const [aiNotice, setAiNotice] = useState('');
   const [dailyTdeeDraft, setDailyTdeeDraft] = useState(String(tdee));
   const hasDailyTdeeOverride = dailyTdeeOverride !== undefined && dailyTdeeOverride !== null;
 
@@ -394,14 +392,13 @@ export default function Dashboard({
     if (!aiText.trim()) return;
     setAiEstimating(true);
     setAiError('');
-    setAiNotice('');
 
     const isMockMode = apiSettings?.mode === 'local' && !apiSettings?.apiKey;
 
     if (isMockMode) {
       setTimeout(() => {
         try {
-          const result = applyNutritionLabelRules(aiText, estimateTextLocalMock(aiText));
+          const result = estimateTextLocalMock(aiText);
           setQuickMeal(prev => ({
             ...prev,
             name: result.name,
@@ -412,7 +409,6 @@ export default function Dashboard({
             type: inferMealTypeFromText(aiText, prev.type),
             selectedFood: ''
           }));
-          setAiNotice(result.estimationNote || '');
           setAiText('');
         } catch (err) {
           setAiError('本地估算出错');
@@ -445,7 +441,7 @@ export default function Dashboard({
           throw new Error(`分析失败: ${response.status} - ${errText}`);
         }
         const data = await response.json();
-        result = data.result || data;
+        result = data.result;
       } else {
         const isQwen = apiSettings?.provider === 'qwen';
         const url = isQwen 
@@ -457,7 +453,19 @@ export default function Dashboard({
           'Authorization': `Bearer ${apiSettings?.apiKey}`
         };
 
-        const systemPrompt = TEXT_ESTIMATION_SYSTEM_PROMPT;
+        const systemPrompt = `You are a professional nutrition expert. Analyze the food description text provided and estimate the summary dish name, estimated weight of each ingredient/food item, total calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
+Return strictly a valid JSON object in this format:
+{
+  "name": "Summary of the meals in Chinese (e.g. 红烧肉配米饭)",
+  "calories": total_calories_number,
+  "protein": total_protein_grams_number,
+  "carbs": total_carbs_grams_number,
+  "fat": total_fat_grams_number,
+  "items": [
+    { "name": "Ingredient or food name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
+  ]
+}
+Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
 
         const requestBody = {
           model: isQwen ? 'qwen3.5-omni-flash' : 'gpt-4o-mini',
@@ -497,23 +505,19 @@ export default function Dashboard({
         result = JSON.parse(cleaned.trim());
       }
 
-      if (!result) {
-        throw new Error('AI 没有返回可用的营养数据，请换一种描述重试。');
+      if (result) {
+        setQuickMeal(prev => ({
+          ...prev,
+          name: result.name,
+          calories: result.calories.toString(),
+          protein: result.protein.toString(),
+          carbs: result.carbs.toString(),
+          fat: result.fat.toString(),
+          type: inferMealTypeFromText(aiText, prev.type),
+          selectedFood: ''
+        }));
+        setAiText('');
       }
-
-      const correctedResult = applyNutritionLabelRules(aiText, result);
-      setQuickMeal(prev => ({
-        ...prev,
-        name: correctedResult.name,
-        calories: correctedResult.calories.toString(),
-        protein: correctedResult.protein.toString(),
-        carbs: correctedResult.carbs.toString(),
-        fat: correctedResult.fat.toString(),
-        type: inferMealTypeFromText(aiText, prev.type),
-        selectedFood: ''
-      }));
-      setAiNotice(correctedResult.estimationNote || '');
-      setAiText('');
     } catch (err) {
       console.error(err);
       if (err.name === 'AbortError') {
@@ -836,10 +840,7 @@ export default function Dashboard({
                     className="form-input ai-textarea"
                     placeholder="例如：中午吃了一小碗红烧肉，一碗米饭，一盘青菜，喝了一杯拿铁"
                     value={aiText}
-                    onChange={e => {
-                      setAiText(e.target.value);
-                      if (aiNotice) setAiNotice('');
-                    }}
+                    onChange={e => setAiText(e.target.value)}
                   />
                   <button
                     type="button"
@@ -850,7 +851,6 @@ export default function Dashboard({
                     {aiEstimating ? 'AI 分析估算中...' : '开始智能估算'}
                   </button>
                 </div>
-                {aiNotice && <span className="ai-notice-msg">{aiNotice}</span>}
                 {aiError && <span className="ai-error-msg">{aiError}</span>}
               </div>
 
@@ -1906,13 +1906,6 @@ export default function Dashboard({
           color: var(--color-danger);
           margin-top: 0.25rem;
           display: block;
-        }
-        .ai-notice-msg {
-          font-size: 0.72rem;
-          color: var(--text-secondary);
-          margin-top: 0.25rem;
-          display: block;
-          line-height: 1.45;
         }
         .food-converter-block {
           background: rgba(255, 255, 255, 0.02);
