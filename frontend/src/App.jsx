@@ -173,9 +173,20 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setMeals(data);
+      } else if (response.status === 401 || response.status === 403) {
+        console.warn('云端登录状态已失效，请重新登录。');
       }
     } catch (err) {
       console.error('无法连接云端服务器获取餐食:', err);
+    }
+  };
+
+  const getApiErrorMessage = async (response, fallback) => {
+    try {
+      const data = await response.json();
+      return data.error || data.message || fallback;
+    } catch (err) {
+      return fallback;
     }
   };
 
@@ -409,7 +420,13 @@ export default function App() {
           },
           body: JSON.stringify(newMeal)
         });
-        if (!response.ok) throw new Error('云端同步失败');
+        if (!response.ok) {
+          const message = await getApiErrorMessage(
+            response,
+            response.status === 401 || response.status === 403 ? '登录状态已失效，请重新登录。' : '云端同步失败'
+          );
+          throw new Error(message);
+        }
         
         // Re-fetch to get database ID
         fetchMealsFromServer();
@@ -418,7 +435,7 @@ export default function App() {
         console.error(err);
         // Fallback save locally if network failed
         localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
-        alert('云端同步失败，已暂存至本地存储。');
+        alert(`${err.message || '云端同步失败'}，已暂存至本地存储。`);
       }
     }
   };
@@ -464,13 +481,19 @@ export default function App() {
           },
           body: JSON.stringify(updatedMeal)
         });
-        if (!response.ok) throw new Error('云端更新失败');
+        if (!response.ok) {
+          const message = await getApiErrorMessage(
+            response,
+            response.status === 401 || response.status === 403 ? '登录状态已失效，请重新登录。' : '云端更新失败'
+          );
+          throw new Error(message);
+        }
         fetchMealsFromServer();
         alert('记录已成功修改！');
       } catch (err) {
         console.error(err);
         localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
-        alert('云端同步失败，已暂存至本地。');
+        alert(`${err.message || '云端同步失败'}，已暂存至本地。`);
       }
     }
   };

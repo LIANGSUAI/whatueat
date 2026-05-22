@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import aiRoutes from './routes/ai.js';
 import mealRoutes from './routes/meals.js';
+import { query } from './db.js';
 
 dotenv.config();
 
@@ -28,6 +29,34 @@ app.get('/health', (req, res) => {
     ai_qwen_configured: !!process.env.DASHSCOPE_API_KEY,
     ai_proxy_configured: !!process.env.AI_API_KEY
   });
+});
+
+app.get('/health/db', async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        current_database() AS database,
+        current_user AS user,
+        to_regclass('public.users') AS users_table,
+        to_regclass('public.meals') AS meals_table,
+        (SELECT COUNT(*)::int FROM users) AS users_count,
+        (SELECT COUNT(*)::int FROM meals) AS meals_count
+    `);
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: result.rows[0]
+    });
+  } catch (err) {
+    console.error('数据库健康检查失败:', err);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      message: '数据库连接或查询失败',
+      error: err.message
+    });
+  }
 });
 
 // 404 Error handler
