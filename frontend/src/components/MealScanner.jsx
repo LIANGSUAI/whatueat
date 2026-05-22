@@ -53,7 +53,7 @@ const MOCK_MEALS_DATABASE = [
   }
 ];
 
-const createMealThumbnail = (source, maxSize = 120, quality = 0.55) => {
+const createMealThumbnail = (source, maxSize = 320, quality = 0.65) => {
   if (!source) return Promise.resolve(null);
 
   return new Promise((resolve, reject) => {
@@ -330,7 +330,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
     setError(null);
 
     try {
-      const thumbnail = await createMealThumbnail(imagePreview, 120, 0.55);
+      const thumbnail = await createMealThumbnail(imagePreview, 320, 0.65);
       onSaveMeal({
         ...editedResult,
         image: thumbnail,
@@ -607,8 +607,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
               {/* AI Explanation card */}
               {editedResult.explanation && (
                 <div className="ai-explanation-box animate-fadeIn" style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px dashed rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(244, 122, 56, 0.04)',
+                  border: '1px dashed rgba(244, 122, 56, 0.25)',
                   borderRadius: '12px',
                   padding: '0.75rem 1rem',
                   marginBottom: '1.25rem',
@@ -618,7 +618,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '0.35rem', 
-                    color: '#ffd700', 
+                    color: 'var(--color-primary)', 
                     fontWeight: 'bold', 
                     marginBottom: '0.35rem' 
                   }}>
@@ -632,10 +632,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
                       value={editedResult.explanation}
                       onChange={e => handleEditChange('explanation', e.target.value)}
                       placeholder="AI 分析或说明..."
-                      style={{ resize: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.8rem', fontFamily: 'inherit', color: '#fff', width: '100%' }}
+                      style={{ resize: 'none', background: 'var(--bg-input)', fontSize: '0.85rem', fontFamily: 'inherit', color: 'var(--text-primary)', width: '100%', border: '1px solid rgba(92, 102, 122, 0.2)' }}
                     />
                   ) : (
-                    <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4', margin: 0 }}>
+                    <p style={{ color: 'var(--text-primary)', lineHeight: '1.4', margin: 0 }}>
                       {editedResult.explanation}
                     </p>
                   )}
@@ -1047,8 +1047,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
         .num-input-label {
           font-size: 0.65rem;
-          color: rgba(255, 255, 255, 0.4);
-          font-weight: 500;
+          color: var(--text-secondary);
+          font-weight: 600;
         }
         .inline-input-num {
           width: 100%;

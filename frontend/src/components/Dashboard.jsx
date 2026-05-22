@@ -1028,20 +1028,6 @@ Do not return any markdown formatting outside of JSON, do not include any though
                           <div className="meal-macros-text">
                             蛋白质 {meal.protein}g · 碳水 {meal.carbs}g · 脂肪 {meal.fat}g
                           </div>
-                          {meal.explanation && (
-                            <div className="meal-explanation-text" style={{ 
-                              fontSize: '0.75rem', 
-                              color: 'rgba(255, 255, 255, 0.45)', 
-                              marginTop: '0.25rem',
-                              fontStyle: 'italic',
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '0.25rem'
-                            }}>
-                              <span style={{ fontSize: '0.85rem', flexShrink: 0, marginTop: '-1px' }}>💡</span>
-                              <span style={{ lineHeight: '1.25' }}>{meal.explanation}</span>
-                            </div>
-                          )}
                         </div>
                         <div className="meal-item-actions">
                           <button 
