@@ -33,14 +33,15 @@ export default function App() {
     return match ? Number(match[0]) : fallback;
   };
 
-  const normalizeMealForSave = (meal, timestamp) => ({
-    ...meal,
-    name: String(meal.name || '未命名餐食'),
+  const normalizeMealForSave = (meal, timestamp = meal.timestamp || getMergedTimestamp(selectedDate)) => ({
+    name: String(meal.name || '未命名餐食').trim(),
     calories: Math.max(0, Math.round(readNumeric(meal.calories))),
     protein: Math.max(0, readNumeric(meal.protein)),
     carbs: Math.max(0, readNumeric(meal.carbs)),
     fat: Math.max(0, readNumeric(meal.fat)),
     items: Array.isArray(meal.items) ? meal.items : [],
+    image: meal.image || null,
+    type: meal.type || 'Lunch',
     timestamp
   });
 
@@ -480,7 +481,11 @@ export default function App() {
 
   // 7b. Update Meal Log
   const handleUpdateMeal = async (updatedMeal) => {
-    const updatedMeals = meals.map(m => m.id === updatedMeal.id ? updatedMeal : m);
+    const mealToUpdate = {
+      ...normalizeMealForSave(updatedMeal, updatedMeal.timestamp || getMergedTimestamp(selectedDate)),
+      id: updatedMeal.id
+    };
+    const updatedMeals = meals.map(m => m.id === updatedMeal.id ? mealToUpdate : m);
     setMeals(updatedMeals);
 
     if (apiSettings.mode === 'local') {
@@ -500,9 +505,12 @@ export default function App() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiSettings.token}`
           },
-          body: JSON.stringify(updatedMeal)
+          body: JSON.stringify(mealToUpdate)
         });
-        if (!response.ok) throw new Error('云端更新失败');
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`云端更新失败: ${errText || response.status}`);
+        }
         fetchMealsFromServer();
         alert('记录已成功修改！');
       } catch (err) {

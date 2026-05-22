@@ -13,6 +13,20 @@ const readNumber = (value, fallback = 0) => {
   return match ? Number(match[0]) : fallback;
 };
 
+const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const readCalories = (value) => {
+  const calories = Math.round(readNumber(value));
+  if (!Number.isFinite(calories) || calories <= 0) return null;
+  return clampNumber(calories, 1, MAX_POSTGRES_INTEGER);
+};
+
+const readMacro = (value) => {
+  const macro = readNumber(value);
+  if (!Number.isFinite(macro) || macro < 0) return 0;
+  return clampNumber(macro, 0, 999.99);
+};
+
 const readMealId = (id) => {
   const mealId = Number(id);
   if (!Number.isInteger(mealId) || mealId <= 0 || mealId > MAX_POSTGRES_INTEGER) {
@@ -177,8 +191,9 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { name, calories, protein, carbs, fat, items, image, type, timestamp } = req.body;
+  const parsedCalories = readCalories(calories);
 
-  if (!name || !calories) {
+  if (!name || !parsedCalories) {
     return res.status(400).json({ message: '餐食名称及卡路里为必填项。' });
   }
 
@@ -192,10 +207,10 @@ router.post('/', authenticateToken, async (req, res) => {
       [
         userId,
         name,
-        Math.round(readNumber(calories)),
-        readNumber(protein),
-        readNumber(carbs),
-        readNumber(fat),
+        parsedCalories,
+        readMacro(protein),
+        readMacro(carbs),
+        readMacro(fat),
         JSON.stringify(items || []),
         image || null,
         type || 'Lunch',
@@ -237,12 +252,13 @@ router.put('/:id', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const mealId = readMealId(req.params.id);
   const { name, calories, protein, carbs, fat, items, type, timestamp } = req.body;
+  const parsedCalories = readCalories(calories);
 
   if (!mealId) {
     return res.status(400).json({ message: '无效的 ID 参数。' });
   }
 
-  if (!name || !calories) {
+  if (!name || !parsedCalories) {
     return res.status(400).json({ message: '餐食名称及卡路里为必填项。' });
   }
 
@@ -255,10 +271,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
        RETURNING id`,
       [
         name,
-        Math.round(readNumber(calories)),
-        readNumber(protein),
-        readNumber(carbs),
-        readNumber(fat),
+        parsedCalories,
+        readMacro(protein),
+        readMacro(carbs),
+        readMacro(fat),
         JSON.stringify(items || []),
         type || 'Lunch',
         mealTime,
