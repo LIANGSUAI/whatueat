@@ -53,7 +53,7 @@ const MOCK_MEALS_DATABASE = [
   }
 ];
 
-const createMealThumbnail = (source, maxSize = 320, quality = 0.65) => {
+const createMealThumbnail = (source, maxSize = 120, quality = 0.55) => {
   if (!source) return Promise.resolve(null);
 
   return new Promise((resolve, reject) => {
@@ -222,13 +222,21 @@ export default function MealScanner({
         };
 
         const systemPrompt = `You are a professional nutrition expert. Analyze the food image provided and estimate the dish name, estimated weight of each ingredient, calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
+
+Critical Rules for Nutrition Facts Table (营养成分表) / Packaged Foods:
+1. Identify Nutrition Tables: If the image contains a nutrition facts table (营养成分表), you must prioritize its data.
+2. Unit Conversion: Check the energy unit. If it is in Kilojoules (kJ), you MUST divide it by 4.184 to convert it to Kilocalories (kcal). Do not confuse kJ and kcal!
+3. Portion/Net Weight Scaling: Check the reference portion size (e.g., per 100g or per serving) and estimate/read the total net weight of the package. Scale all nutrient values proportionally: Total value = (Table value) * (Total net weight / Reference weight).
+4. Explain the math in the "explanation" field.
+
 Return strictly a valid JSON object in this format:
 {
-  "name": "Dish name in Chinese",
+  "name": "Dish/Food name in Chinese",
   "calories": total_calories_number,
   "protein": total_protein_grams_number,
   "carbs": total_carbs_grams_number,
   "fat": total_fat_grams_number,
+  "explanation": "A short (1-2 sentences) explanation in Chinese summarizing the food item, calorie/portion calculation, or nutrition tip.",
   "items": [
     { "name": "Ingredient name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
   ]
@@ -278,6 +286,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein: parseNumeric(parsedJson.protein),
         carbs: parseNumeric(parsedJson.carbs),
         fat: parseNumeric(parsedJson.fat),
+        explanation: parsedJson.explanation || '',
         items: Array.isArray(parsedJson.items) 
           ? parsedJson.items.map(item => ({
               name: item.name || '',
@@ -321,7 +330,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
     setError(null);
 
     try {
-      const thumbnail = await createMealThumbnail(imagePreview);
+      const thumbnail = await createMealThumbnail(imagePreview, 120, 0.55);
       onSaveMeal({
         ...editedResult,
         image: thumbnail,
@@ -529,38 +538,50 @@ Do not return any markdown formatting outside of JSON, do not include any though
                             onChange={e => handleEditChange('weight', e.target.value, idx)}
                           />
                           <div className="nutrients-edit-grid">
-                            <input 
-                              type="number" 
-                              className="form-input inline-input-num" 
-                              value={item.calories} 
-                              placeholder="Kcal"
-                              onChange={e => handleEditChange('calories', e.target.value, idx)}
-                              title="卡路里"
-                            />
-                            <input 
-                              type="number" 
-                              className="form-input inline-input-num" 
-                              value={item.protein} 
-                              placeholder="蛋"
-                              onChange={e => handleEditChange('protein', e.target.value, idx)}
-                              title="蛋白质"
-                            />
-                            <input 
-                              type="number" 
-                              className="form-input inline-input-num" 
-                              value={item.carbs} 
-                              placeholder="碳"
-                              onChange={e => handleEditChange('carbs', e.target.value, idx)}
-                              title="碳水"
-                            />
-                            <input 
-                              type="number" 
-                              className="form-input inline-input-num" 
-                              value={item.fat} 
-                              placeholder="脂"
-                              onChange={e => handleEditChange('fat', e.target.value, idx)}
-                              title="脂肪"
-                            />
+                            <div className="num-input-wrap">
+                              <span className="num-input-label">热量 (kcal)</span>
+                              <input 
+                                type="number" 
+                                className="form-input inline-input-num" 
+                                value={item.calories} 
+                                placeholder="Kcal"
+                                onChange={e => handleEditChange('calories', e.target.value, idx)}
+                                title="卡路里"
+                              />
+                            </div>
+                            <div className="num-input-wrap">
+                              <span className="num-input-label">蛋白质 (g)</span>
+                              <input 
+                                type="number" 
+                                className="form-input inline-input-num" 
+                                value={item.protein} 
+                                placeholder="蛋白质"
+                                onChange={e => handleEditChange('protein', e.target.value, idx)}
+                                title="蛋白质"
+                              />
+                            </div>
+                            <div className="num-input-wrap">
+                              <span className="num-input-label">碳水 (g)</span>
+                              <input 
+                                type="number" 
+                                className="form-input inline-input-num" 
+                                value={item.carbs} 
+                                placeholder="碳水"
+                                onChange={e => handleEditChange('carbs', e.target.value, idx)}
+                                title="碳水"
+                              />
+                            </div>
+                            <div className="num-input-wrap">
+                              <span className="num-input-label">脂肪 (g)</span>
+                              <input 
+                                type="number" 
+                                className="form-input inline-input-num" 
+                                value={item.fat} 
+                                placeholder="脂肪"
+                                onChange={e => handleEditChange('fat', e.target.value, idx)}
+                                title="脂肪"
+                              />
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -582,6 +603,44 @@ Do not return any markdown formatting outside of JSON, do not include any though
                   ))}
                 </div>
               </div>
+
+              {/* AI Explanation card */}
+              {editedResult.explanation && (
+                <div className="ai-explanation-box animate-fadeIn" style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px dashed rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1rem',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.35rem', 
+                    color: '#ffd700', 
+                    fontWeight: 'bold', 
+                    marginBottom: '0.35rem' 
+                  }}>
+                    <span style={{ fontSize: '1rem' }}>💡</span>
+                    <span>AI 智能分析说明</span>
+                  </div>
+                  {editMode ? (
+                    <textarea
+                      className="form-input"
+                      rows={2}
+                      value={editedResult.explanation}
+                      onChange={e => handleEditChange('explanation', e.target.value)}
+                      placeholder="AI 分析或说明..."
+                      style={{ resize: 'none', background: 'rgba(0,0,0,0.2)', fontSize: '0.8rem', fontFamily: 'inherit', color: '#fff', width: '100%' }}
+                    />
+                  ) : (
+                    <p style={{ color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4', margin: 0 }}>
+                      {editedResult.explanation}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="scanned-actions-row">
@@ -956,30 +1015,45 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
 
         .ingredient-edit-fields {
-          display: flex;
-          flex-wrap: wrap;
+          display: grid;
+          grid-template-columns: 2fr 1fr;
           gap: 0.5rem;
-          align-items: center;
+          width: 100%;
         }
         .inline-input-name {
-          flex: 2;
-          padding: 0.25rem 0.5rem;
-          font-size: 0.8rem;
+          width: 100%;
+          padding: 0.35rem 0.5rem;
+          font-size: 0.85rem;
         }
         .inline-input-wt {
-          flex: 1;
-          padding: 0.25rem 0.5rem;
-          font-size: 0.8rem;
+          width: 100%;
+          padding: 0.35rem 0.5rem;
+          font-size: 0.85rem;
         }
         .nutrients-edit-grid {
+          grid-column: span 2;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.5rem;
+          width: 100%;
+          margin-top: 0.25rem;
+        }
+        .num-input-wrap {
           display: flex;
+          flex-direction: column;
+          align-items: center;
           gap: 0.25rem;
-          flex: 3;
+          width: 100%;
+        }
+        .num-input-label {
+          font-size: 0.65rem;
+          color: rgba(255, 255, 255, 0.4);
+          font-weight: 500;
         }
         .inline-input-num {
-          flex: 1;
-          padding: 0.25rem 0.25rem;
-          font-size: 0.75rem;
+          width: 100%;
+          padding: 0.35rem 0.25rem;
+          font-size: 0.8rem;
           text-align: center;
         }
 

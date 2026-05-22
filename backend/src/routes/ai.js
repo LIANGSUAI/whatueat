@@ -40,6 +40,7 @@ const sanitizeAiResult = (parsedJson) => {
     protein: parseNumeric(parsedJson.protein),
     carbs: parseNumeric(parsedJson.carbs),
     fat: parseNumeric(parsedJson.fat),
+    explanation: parsedJson.explanation || '',
     items: Array.isArray(parsedJson.items) 
       ? parsedJson.items.map(item => ({
           name: item.name || '',
@@ -85,13 +86,21 @@ router.post('/scan', async (req, res) => {
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
     const systemPrompt = `You are a professional nutrition expert. Analyze the food image provided and estimate the dish name, estimated weight of each ingredient, calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
+
+Critical Rules for Nutrition Facts Table (营养成分表) / Packaged Foods:
+1. Identify Nutrition Tables: If the image contains a nutrition facts table (营养成分表), you must prioritize its data.
+2. Unit Conversion: Check the energy unit. If it is in Kilojoules (kJ), you MUST divide it by 4.184 to convert it to Kilocalories (kcal). Do not confuse kJ and kcal!
+3. Portion/Net Weight Scaling: Check the reference portion size (e.g., per 100g or per serving) and estimate/read the total net weight of the package. Scale all nutrient values proportionally: Total value = (Table value) * (Total net weight / Reference weight).
+4. Explain the math in the "explanation" field.
+
 Return strictly a valid JSON object in this format:
 {
-  "name": "Dish name in Chinese",
+  "name": "Dish/Food name in Chinese",
   "calories": total_calories_number,
   "protein": total_protein_grams_number,
   "carbs": total_carbs_grams_number,
   "fat": total_fat_grams_number,
+  "explanation": "A short (1-2 sentences) explanation in Chinese summarizing the food item, calorie/portion calculation, or nutrition tip.",
   "items": [
     { "name": "Ingredient name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
   ]
@@ -149,6 +158,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein: 38,
         carbs: 35,
         fat: 24,
+        explanation: '这是一道健康均衡的低卡减脂餐。富含优质三文鱼蛋白质、不饱和脂肪酸以及低 GI 的藜麦。',
         items: [
           { name: '香煎三文鱼', weight: '150g', calories: 310, protein: 32, carbs: 0, fat: 20 },
           { name: '煮藜麦', weight: '100g', calories: 120, protein: 4, carbs: 21, fat: 2 },
@@ -201,6 +211,12 @@ router.post('/estimate-text', async (req, res) => {
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
     const systemPrompt = `You are a professional nutrition expert. Analyze the food description text provided and estimate the summary dish name, estimated weight of each ingredient/food item, total calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
+
+Critical Rules for Nutrition Facts Table (营养成分表) / Packaged Foods:
+1. Unit Conversion: If the text specifies energy in Kilojoules (kJ), you MUST divide it by 4.184 to convert it to Kilocalories (kcal).
+2. Portion/Net Weight Scaling: If the text specifies nutrition per 100g or per serving, and specifies a total package/portion net weight, scale all values proportionally to the actual consumed amount.
+3. Provide a brief breakdown of the estimation or conversion math in the "explanation" field.
+
 Return strictly a valid JSON object in this format:
 {
   "name": "Summary of the meals in Chinese (e.g. 红烧肉配米饭)",
@@ -208,6 +224,7 @@ Return strictly a valid JSON object in this format:
   "protein": total_protein_grams_number,
   "carbs": total_carbs_grams_number,
   "fat": total_fat_grams_number,
+  "explanation": "A short (1-2 sentences) explanation in Chinese summarizing the calculation or nutrition tips.",
   "items": [
     { "name": "Ingredient or food name in Chinese", "weight": "100g", "calories": calories_number, "protein": protein_grams, "carbs": carbs_grams, "fat": fat_grams }
   ]
@@ -247,7 +264,6 @@ Do not return any markdown formatting outside of JSON, do not include any though
         response_format: { type: 'json_object' }
       };
     } else {
-      // Mock Fallback Mode based on simple keyword search
       console.log('⚠️ 服务器未配置 DASHSCOPE_API_KEY 或 AI_API_KEY，使用 Mock 文本估算。');
       
       let name = '智能估算：健康餐组合';
@@ -255,6 +271,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
       let protein = 25;
       let carbs = 55;
       let fat = 12;
+      let explanation = '根据您的文字描述，我们智能估算了本餐中各项食物原料的重量与营养成分。';
       let items = [
         { name: '主食类', weight: '150g', calories: 200, protein: 5, carbs: 40, fat: 1 },
         { name: '蛋白质类', weight: '100g', calories: 180, protein: 18, carbs: 1, fat: 10 },
@@ -268,6 +285,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         items[0] = { name: '白米饭', weight: '150g', calories: 174, protein: 4, carbs: 39, fat: 0 };
         calories = 174 + 180 + 70;
         carbs = 39 + 1 + 14;
+        explanation = '包含一碗标准熟白米饭（约 150g），搭配了适量蛋白质与蔬菜，主食碳水比例适中。';
       }
       if (lowerText.includes('肉') || lowerText.includes('猪肉') || lowerText.includes('红烧肉')) {
         name = name.includes('米饭') ? '红烧肉配米饭' : '红烧肉';
@@ -276,6 +294,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein = 15 + (name.includes('米饭') ? 4 : 0) + 2;
         carbs = (name.includes('米饭') ? 39 : 0) + 8 + 14;
         fat = 69 + 1;
+        explanation = '红烧肉属于高脂肪高热量食物，酱油和糖的调味也增加了部分碳水，建议控制摄入频次。';
       }
       if (lowerText.includes('苹果') || lowerText.includes('沙拉')) {
         name = '健康水果沙拉';
@@ -283,6 +302,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein = 2;
         carbs = 30;
         fat = 2;
+        explanation = '非常健康的蔬果沙拉，热量较低，富含膳食纤维，微量沙拉酱提供少许脂肪。';
         items = [
           { name: '苹果', weight: '150g', calories: 78, protein: 0, carbs: 20, fat: 0 },
           { name: '沙拉酱', weight: '20g', calories: 72, protein: 2, carbs: 10, fat: 2 }
@@ -294,6 +314,7 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein = 6;
         carbs = 50;
         fat = 12;
+        explanation = '烘焙面包属于精致碳水，含有较多奶油或黄油，因而热量与碳水、脂肪偏高。';
         items = [
           { name: '奶油小面包', weight: '150g', calories: 340, protein: 6, carbs: 50, fat: 12 }
         ];
@@ -304,13 +325,14 @@ Do not return any markdown formatting outside of JSON, do not include any though
         protein = 9;
         carbs = 14;
         fat = 7;
+        explanation = '拿铁咖啡主要热量来源于全脂牛奶（约 250ml），浓缩咖啡本身热量极低。';
         items = [
           { name: '牛奶', weight: '250ml', calories: 150, protein: 8, carbs: 12, fat: 7 },
           { name: '浓缩咖啡', weight: '30ml', calories: 10, protein: 1, carbs: 2, fat: 0 }
         ];
       }
 
-      return res.json({ result: { name, calories, protein, carbs, fat, items } });
+      return res.json({ result: { name, calories, protein, carbs, fat, explanation, items } });
     }
 
     const apiResponse = await fetchWithTimeout(url, {

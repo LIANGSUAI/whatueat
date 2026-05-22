@@ -385,7 +385,7 @@ export default function App() {
     const mealCalories = parseNumeric(newMeal?.calories);
     console.log('[DEBUG] handleAddMeal processed fields:', { mealName, mealCalories });
 
-    if (!mealName || mealCalories <= 0) {
+    if (!mealName || (newMeal?.calories === undefined || newMeal?.calories === null || newMeal?.calories === '') || mealCalories < 0) {
       alert('请填写餐食名称和有效热量。');
       return;
     }
@@ -449,6 +449,14 @@ export default function App() {
           throw new Error(message);
         }
         
+        const resData = await response.json();
+        const serverId = resData.id;
+        if (serverId) {
+          setMeals(prevMeals => prevMeals.map(m => m.id === mealWithId.id ? { ...m, id: serverId } : m));
+          const latestMeals = updatedMeals.map(m => m.id === mealWithId.id ? { ...m, id: serverId } : m);
+          localStorage.setItem('whatueat-meals', JSON.stringify(latestMeals));
+        }
+
         // Re-fetch to get database ID
         fetchMealsFromServer();
         alert('餐食记录已同步至阿里云数据库！');

@@ -43,6 +43,7 @@ export const initDbTables = async () => {
       fat NUMERIC(5, 2) DEFAULT 0.0,
       items JSONB DEFAULT '[]',
       image TEXT,
+      explanation TEXT,
       type VARCHAR(20) DEFAULT 'Lunch',
       timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
@@ -70,6 +71,7 @@ export const initDbTables = async () => {
       ADD COLUMN IF NOT EXISTS fat NUMERIC(5, 2) DEFAULT 0.0,
       ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]',
       ADD COLUMN IF NOT EXISTS image TEXT,
+      ADD COLUMN IF NOT EXISTS explanation TEXT,
       ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT 'Lunch',
       ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
   `;

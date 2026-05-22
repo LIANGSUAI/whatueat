@@ -151,7 +151,7 @@ router.get('/', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await query(
-      'SELECT id, name, calories, protein, carbs, fat, items, image, type, timestamp FROM meals WHERE user_id = $1 ORDER BY timestamp DESC',
+      'SELECT id, name, calories, protein, carbs, fat, items, image, explanation, type, timestamp FROM meals WHERE user_id = $1 ORDER BY timestamp DESC',
       [userId]
     );
     
@@ -175,9 +175,9 @@ router.get('/', authenticateToken, async (req, res) => {
 // POST /api/meals - Log a new meal
 router.post('/', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const { name, calories, protein, carbs, fat, items, image, type, timestamp } = req.body;
+  const { name, calories, protein, carbs, fat, items, image, explanation, type, timestamp } = req.body;
 
-  if (!name || !calories) {
+  if (!name || (calories === undefined || calories === null || calories === '')) {
     return res.status(400).json({ message: '餐食名称及卡路里为必填项。' });
   }
 
@@ -185,8 +185,8 @@ router.post('/', authenticateToken, async (req, res) => {
     const mealTime = timestamp ? new Date(timestamp) : new Date();
 
     const result = await query(
-      `INSERT INTO meals (user_id, name, calories, protein, carbs, fat, items, image, type, timestamp)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO meals (user_id, name, calories, protein, carbs, fat, items, image, explanation, type, timestamp)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id`,
       [
         userId,
@@ -208,6 +208,7 @@ router.post('/', authenticateToken, async (req, res) => {
             : []
         ),
         image || null,
+        explanation || null,
         type || 'Lunch',
         mealTime
       ]
@@ -246,13 +247,13 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const mealId = Number(req.params.id);
-  const { name, calories, protein, carbs, fat, items, type, timestamp } = req.body;
+  const { name, calories, protein, carbs, fat, items, image, explanation, type, timestamp } = req.body;
 
   if (isNaN(mealId)) {
     return res.status(400).json({ message: '无效的 ID 参数。' });
   }
 
-  if (!name || !calories) {
+  if (!name || (calories === undefined || calories === null || calories === '')) {
     return res.status(400).json({ message: '餐食名称及卡路里为必填项。' });
   }
 
@@ -260,8 +261,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const mealTime = timestamp ? new Date(timestamp) : new Date();
     const result = await query(
       `UPDATE meals 
-       SET name = $1, calories = $2, protein = $3, carbs = $4, fat = $5, items = $6, type = $7, timestamp = $8
-       WHERE id = $9 AND user_id = $10
+       SET name = $1, calories = $2, protein = $3, carbs = $4, fat = $5, items = $6, image = coalesce($7, image), explanation = coalesce($8, explanation), type = $9, timestamp = $10
+       WHERE id = $11 AND user_id = $12
        RETURNING id`,
       [
         name,
@@ -281,6 +282,8 @@ router.put('/:id', authenticateToken, async (req, res) => {
               }))
             : []
         ),
+        image || null,
+        explanation || null,
         type || 'Lunch',
         mealTime,
         mealId,
