@@ -6,6 +6,20 @@ import { query } from '../db.js';
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'whatueat_jwt_secret_token_key_123';
 
+const parseNumeric = (val, fallback = 0) => {
+  if (val === undefined || val === null || val === '') return fallback;
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? val : fallback;
+  }
+  const clean = String(val).replace(/,/g, '').trim();
+  const match = clean.match(/[-+]?\d+(?:\.\d+)?/);
+  if (match) {
+    const num = Number(match[0]);
+    return Number.isFinite(num) ? num : fallback;
+  }
+  return fallback;
+};
+
 // ----------------------------------------------------
 // Authentication Middleware
 // ----------------------------------------------------
@@ -177,11 +191,22 @@ router.post('/', authenticateToken, async (req, res) => {
       [
         userId,
         name,
-        Number(calories),
-        Number(protein || 0),
-        Number(carbs || 0),
-        Number(fat || 0),
-        JSON.stringify(items || []),
+        parseNumeric(calories),
+        parseNumeric(protein),
+        parseNumeric(carbs),
+        parseNumeric(fat),
+        JSON.stringify(
+          Array.isArray(items) 
+            ? items.map(item => ({
+                name: item.name || '',
+                weight: item.weight || '',
+                calories: parseNumeric(item.calories),
+                protein: parseNumeric(item.protein),
+                carbs: parseNumeric(item.carbs),
+                fat: parseNumeric(item.fat)
+              }))
+            : []
+        ),
         image || null,
         type || 'Lunch',
         mealTime
@@ -240,11 +265,22 @@ router.put('/:id', authenticateToken, async (req, res) => {
        RETURNING id`,
       [
         name,
-        Number(calories),
-        Number(protein || 0),
-        Number(carbs || 0),
-        Number(fat || 0),
-        JSON.stringify(items || []),
+        parseNumeric(calories),
+        parseNumeric(protein),
+        parseNumeric(carbs),
+        parseNumeric(fat),
+        JSON.stringify(
+          Array.isArray(items) 
+            ? items.map(item => ({
+                name: item.name || '',
+                weight: item.weight || '',
+                calories: parseNumeric(item.calories),
+                protein: parseNumeric(item.protein),
+                carbs: parseNumeric(item.carbs),
+                fat: parseNumeric(item.fat)
+              }))
+            : []
+        ),
         type || 'Lunch',
         mealTime,
         mealId,
