@@ -1,0 +1,41 @@
+{
+  "pages": [
+    "pages/dashboard/dashboard",
+    "pages/scanner/scanner",
+    "pages/analytics/analytics",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarTitleText": "WhatUEat",
+    "navigationBarBackgroundColor": "#FCFAF2",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#FCFAF2",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#94A1B5",
+    "selectedColor": "#1661AB",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/dashboard/dashboard",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/scanner/scanner",
+        "text": "拍照"
+      },
+      {
+        "pagePath": "pages/analytics/analytics",
+        "text": "统计"
+      },
+      {
+        "pagePath": "pages/settings/settings",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

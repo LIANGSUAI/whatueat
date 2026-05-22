@@ -38,6 +38,27 @@ whatueat/
 
 ## 🚀 第一部分：本地开发与快速试用
 
+### PWA：添加到手机桌面
+当前网页端已支持 PWA。部署前端后，用户可以像安装 App 一样把网页添加到手机桌面：
+
+*   **iPhone / iPad**：用 Safari 打开网页 -> 点击分享按钮 -> 选择「添加到主屏幕」。
+*   **Android / Chrome**：用 Chrome 打开网页 -> 菜单 -> 选择「添加到主屏幕」或「安装应用」。
+
+PWA 图标与配置文件位于 `frontend/public/`：
+
+```text
+frontend/public/manifest.webmanifest
+frontend/public/sw.js
+frontend/public/icons/
+```
+
+如需重新生成图标：
+
+```bash
+cd frontend
+npm run pwa:icons
+```
+
 ### 1. 快速试用前端 (LocalStorage 模式)
 为了让您最快体验，项目支持在没有任何服务器的情况下单机运行。
 1.  确保前端配置 `frontend/src/config.js` 中的 `APP_CONFIG.mode` 为 `'local'`。

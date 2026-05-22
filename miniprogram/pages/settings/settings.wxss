@@ -1,0 +1,142 @@
+.profile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx;
+}
+
+.hello-title {
+  max-width: 470rpx;
+  overflow: hidden;
+  color: #1a2233;
+  font-size: 38rpx;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  min-height: 64rpx;
+  padding: 0 24rpx;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22rpx;
+  margin-top: 22rpx;
+}
+
+.profile-card,
+.api-config-card {
+  padding: 24rpx;
+}
+
+.right-col-settings-flex {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.profile-basics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14rpx;
+}
+
+.picker-box {
+  display: flex;
+  min-height: 76rpx;
+  align-items: center;
+  border: 2rpx solid rgba(92, 102, 122, 0.26);
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 0 22rpx;
+  color: #1a2233;
+}
+
+.tdee-calc-output {
+  margin-top: 20rpx;
+  border-radius: 22rpx;
+  padding: 22rpx;
+  background: rgba(22, 97, 171, 0.06);
+  border: 2rpx solid rgba(22, 97, 171, 0.1);
+  text-align: center;
+}
+
+.calc-lbl {
+  color: #5c667a;
+  font-size: 24rpx;
+}
+
+.calc-val {
+  margin-top: 6rpx;
+  color: #1661ab;
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.calc-unit {
+  color: #94a1b5;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.tdee-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 136rpx;
+  gap: 14rpx;
+  align-items: end;
+}
+
+.use-calc {
+  margin-top: 16rpx;
+  min-height: 76rpx;
+  padding: 0 8rpx;
+  font-size: 22rpx;
+  white-space: nowrap;
+}
+
+.target-intake-notice {
+  margin-top: 18rpx;
+  border-radius: 18rpx;
+  padding: 18rpx;
+  background: rgba(99, 102, 241, 0.06);
+  border: 2rpx solid rgba(99, 102, 241, 0.14);
+  color: #5c667a;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.save-server,
+.auth-btn,
+.save-profile {
+  margin-top: 18rpx;
+}
+
+.switch-btn {
+  margin-top: 14rpx;
+}
+
+.auth-grid {
+  display: grid;
+  gap: 16rpx;
+}
+
+.cloud-logged-in-notice {
+  border-radius: 20rpx;
+  padding: 20rpx;
+  background: rgba(43, 164, 113, 0.08);
+  border: 2rpx solid rgba(43, 164, 113, 0.16);
+}
+
+.notice-success {
+  color: #2ba471;
+  font-weight: 700;
+}
+
+.logged-username {
+  margin-top: 8rpx;
+  color: #5c667a;
+  font-size: 24rpx;
+}

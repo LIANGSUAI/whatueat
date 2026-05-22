@@ -1,0 +1,227 @@
+<view class="page dashboard-root safe-bottom">
+  <view class="app-topbar">
+    <view class="brand-area">
+      <view class="brand-mark"></view>
+      <view class="brand-title">WhatUEat</view>
+    </view>
+    <view class="account-area">
+      <view wx:if="{{loggedIn}}" class="account-name">{{currentUsername}}</view>
+      <button wx:if="{{loggedIn}}" class="logout-chip" bindtap="logout">退出</button>
+      <button wx:else class="logout-chip" bindtap="goSettings">登录</button>
+      <view class="moon-mark"></view>
+    </view>
+  </view>
+
+  <view class="glass-card date-navigator-card">
+    <view class="date-nav-main">
+      <button class="date-nav-arrow-btn" bindtap="prevDay">‹</button>
+      <view class="date-display-box">
+        <view class="calendar-mark"></view>
+        <view class="date-display-copy">
+          <view class="date-display-text">{{dateLabel}}</view>
+          <view class="date-display-subtext">{{selectedDate}}</view>
+        </view>
+      </view>
+      <button class="date-nav-arrow-btn" bindtap="nextDay">›</button>
+    </view>
+
+    <view class="date-nav-tools">
+      <view class="daily-tdee-control">
+        <text class="daily-tdee-label">当日消耗</text>
+        <view class="daily-tdee-input-wrap">
+          <input type="number" value="{{dailyTdeeDraft}}" bindinput="onDailyTdeeInput" bindblur="saveDailyTdee" />
+          <text>kcal</text>
+        </view>
+        <button bindtap="resetDailyTdee">默认</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loggedIn}}" class="panel login-tip">
+    <view class="panel-title">先连接你的账号</view>
+    <view class="muted">登录后会同步读取服务器里的饮食记录，小程序本地只保存设置、喝水和每日 TDEE 覆盖值。</view>
+    <button class="primary-btn login-btn" bindtap="goSettings">去登录</button>
+  </view>
+
+  <view class="stats-banner-grid">
+    <view wx:for="{{statCards}}" wx:key="key" class="{{item.className}}">
+      <view class="{{item.iconClass}}"></view>
+      <view class="stat-copy">
+        <view class="stat-label">{{item.label}}</view>
+        <view class="stat-val">{{item.value}} <text class="stat-unit">{{item.unit}}</text></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="dashboard-grid">
+    <view class="glass-card circular-progress-card">
+      <view class="card-title">卡路里平衡盘</view>
+      <view class="circle-chart-container" style="{{ringStyle}}">
+        <view class="circle-inner-text">
+          <view class="circle-calories-num">{{remainingValue}}</view>
+          <view class="circle-calories-label">{{remainingLabel}}</view>
+          <view class="circle-calories-target">目标: {{targetCalories}} kcal</view>
+        </view>
+      </view>
+
+      <view class="calorie-summary-footer">
+        <view class="summary-col">
+          <view class="sub-val">{{effectiveTdee}}</view>
+          <view class="sub-label">TDEE</view>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-col">
+          <view class="sub-val">{{totals.calories}}</view>
+          <view class="sub-label">已摄入</view>
+        </view>
+        <view class="summary-divider"></view>
+        <view class="summary-col">
+          <view class="sub-val">{{targetCalories}}</view>
+          <view class="sub-label">目标摄入</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="glass-card macros-card">
+      <view class="card-title">三大营养素分析</view>
+      <view class="macros-progress-list">
+        <view wx:for="{{macroRows}}" wx:key="key" class="macro-progress-row">
+          <view class="macro-header">
+            <text class="macro-name">{{item.name}}</text>
+            <text class="macro-value">{{item.valueText}}</text>
+          </view>
+          <view class="macro-bar-container">
+            <view class="{{item.barClass}}" style="width: {{item.pct}}%;"></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="water-tracker-container">
+        <view class="water-header">
+          <view class="water-title">
+            <text class="water-icon">水</text>
+            <text>饮水记录</text>
+          </view>
+          <text class="water-amount">{{water}} / 2000 ml</text>
+        </view>
+        <view class="water-cups-row">
+          <button wx:for="{{waterCups}}" wx:key="index" class="{{item.className}}" data-value="{{item.value}}" bindtap="setWaterCup">水</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="meal-timeline-section">
+    <view class="section-header">
+      <view class="section-title">今日饮食打卡</view>
+      <button class="ghost-btn section-action" bindtap="applyCommonFood">常用食物</button>
+    </view>
+
+    <view class="glass-card quick-add-form-card">
+      <view class="quick-add-header-row">
+        <view class="quick-add-title">快速记录餐食</view>
+        <view class="badge-purple">AI 估算</view>
+      </view>
+
+      <view class="ai-text-estimator-block">
+        <view class="input-label-with-badge">
+          <text class="label-text">AI 文本估算</text>
+          <text class="mini-text">一句话填表</text>
+        </view>
+        <view class="ai-textarea-wrapper">
+          <textarea class="ai-textarea" placeholder="例如：中午吃了一小碗红烧肉，一碗米饭，一盘青菜" value="{{aiText}}" bindinput="onAiTextInput"></textarea>
+          <button class="secondary-btn ai-estimate-button" loading="{{aiEstimating}}" disabled="{{aiEstimating}}" bindtap="estimateText">
+            <text wx:if="{{aiEstimating}}">分析中</text>
+            <text wx:else>开始估算</text>
+          </button>
+        </view>
+      </view>
+
+      <view class="food-converter-block">
+        <view class="food-converter-row">
+          <view class="field">
+            <text class="field-label">选择常见食物估算</text>
+            <picker range="{{commonFoods}}" range-key="name" value="{{commonFoodIndex}}" bindchange="onCommonFoodChange">
+              <view class="picker-box">{{commonFoodName}}</view>
+            </picker>
+          </view>
+          <view class="field">
+            <text class="field-label">克数</text>
+            <input type="number" value="{{commonFoodGrams}}" bindinput="onCommonGramsInput" placeholder="100" />
+          </view>
+        </view>
+      </view>
+
+      <view class="quick-entry-grid">
+        <view class="field quick-name-field">
+          <text class="field-label">餐食名称</text>
+          <input value="{{quickMeal.name}}" data-field="name" bindinput="onQuickMealInput" placeholder="如：煎饼果子、美式咖啡" />
+        </view>
+        <view class="field">
+          <text class="field-label">分类</text>
+          <picker range="{{mealTypes}}" range-key="label" value="{{quickMealTypeIndex}}" bindchange="onQuickTypeChange">
+            <view class="picker-box">{{quickMealTypeLabel}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text class="field-label">热量</text>
+          <input type="number" value="{{quickMeal.calories}}" data-field="calories" bindinput="onQuickMealInput" placeholder="kcal" />
+        </view>
+        <view class="macro-inputs-inline">
+          <view class="field">
+            <text class="field-label">蛋白</text>
+            <input type="digit" value="{{quickMeal.protein}}" data-field="protein" bindinput="onQuickMealInput" placeholder="g" />
+          </view>
+          <view class="field">
+            <text class="field-label">碳水</text>
+            <input type="digit" value="{{quickMeal.carbs}}" data-field="carbs" bindinput="onQuickMealInput" placeholder="g" />
+          </view>
+          <view class="field">
+            <text class="field-label">脂肪</text>
+            <input type="digit" value="{{quickMeal.fat}}" data-field="fat" bindinput="onQuickMealInput" placeholder="g" />
+          </view>
+        </view>
+      </view>
+
+      <view class="quick-add-actions">
+        <button class="primary-btn save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="addMeal">
+          <text wx:if="{{saving}}">保存中...</text>
+          <text wx:else>添加餐食</text>
+        </button>
+      </view>
+    </view>
+
+    <view class="timeline-grid">
+      <view wx:for="{{mealGroups}}" wx:key="key" wx:for-item="group" class="glass-card timeline-card">
+        <view class="timeline-card-header">
+          <view class="type-info">
+            <view class="type-icon-box">{{group.icon}}</view>
+            <view>
+              <view class="type-name">{{group.name}}</view>
+              <view class="type-desc">{{group.desc}}</view>
+            </view>
+          </view>
+          <text wx:if="{{group.hasMeals}}" class="type-calorie-badge">{{group.badgeText}}</text>
+        </view>
+
+        <view class="logged-meals-list">
+          <view wx:if="{{!group.hasMeals}}" class="empty-meal-slot">尚未记录</view>
+          <view wx:else>
+            <view wx:for="{{group.meals}}" wx:key="id" wx:for-item="meal" class="meal-item-row">
+              <image wx:if="{{meal.imagePath}}" class="meal-thumbnail-img" src="{{meal.imagePath}}" mode="aspectFill"></image>
+              <view wx:else class="meal-thumbnail-placeholder">{{group.icon}}</view>
+              <view class="meal-details">
+                <view class="meal-title-row">
+                  <text class="meal-name-text">{{meal.name}}</text>
+                  <text class="meal-kcal-text">{{meal.caloriesText}}</text>
+                </view>
+                <view class="meal-macros-text">{{meal.macroText}}</view>
+              </view>
+              <button class="delete-meal-btn" data-id="{{meal.id}}" bindtap="deleteMeal">删</button>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

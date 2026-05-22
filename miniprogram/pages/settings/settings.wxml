@@ -1,0 +1,94 @@
+<view class="page settings-root safe-bottom">
+  <view class="glass-card profile-head">
+    <view>
+      <view class="hello-title">{{heroTitle}}</view>
+      <view class="mini-text">{{heroSubtitle}}</view>
+    </view>
+    <button wx:if="{{loggedIn}}" class="danger-btn logout-btn" bindtap="logout">退出</button>
+  </view>
+
+  <view class="settings-grid">
+    <view class="glass-card profile-card">
+      <view class="panel-title">
+        <text>个人档案与代谢计算器</text>
+        <text class="pill">估算 {{calculatedTdee}} kcal</text>
+      </view>
+
+      <view class="profile-basics-grid">
+        <view class="field">
+          <text class="field-label">性别</text>
+          <picker range="{{genderOptions}}" range-key="label" value="{{genderIndex}}" bindchange="onGenderChange">
+            <view class="picker-box">{{genderLabel}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text class="field-label">年龄</text>
+          <input type="number" value="{{profile.age}}" data-field="age" bindinput="onProfileInput" />
+        </view>
+        <view class="field">
+          <text class="field-label">身高 cm</text>
+          <input type="number" value="{{profile.height}}" data-field="height" bindinput="onProfileInput" />
+        </view>
+        <view class="field">
+          <text class="field-label">体重 kg</text>
+          <input type="digit" value="{{profile.weight}}" data-field="weight" bindinput="onProfileInput" />
+        </view>
+      </view>
+
+      <view class="field">
+        <text class="field-label">活动水平</text>
+        <picker range="{{activityOptions}}" range-key="label" value="{{activityIndex}}" bindchange="onActivityChange">
+          <view class="picker-box">{{activityLabel}}</view>
+        </picker>
+      </view>
+
+      <view class="tdee-calc-output">
+        <view class="calc-lbl">根据档案估算的 TDEE</view>
+        <view class="calc-val">{{calculatedTdee}} <text class="calc-unit">kcal</text></view>
+      </view>
+
+      <view class="tdee-row">
+        <view class="field tdee-field">
+          <text class="field-label">默认 TDEE kcal</text>
+          <input type="number" value="{{profile.tdee}}" data-field="tdee" bindinput="onProfileInput" />
+        </view>
+        <button class="secondary-btn use-calc" bindtap="useCalculatedTdee">用估算值</button>
+      </view>
+
+      <view class="field">
+        <text class="field-label">默认每日热量缺口 kcal</text>
+        <input type="number" value="{{profile.deficit}}" data-field="deficit" bindinput="onProfileInput" />
+      </view>
+
+      <view class="target-intake-notice">每日目标摄入会按 TDEE - 缺口计算，首页也可以为每天单独覆盖 TDEE。</view>
+
+      <button class="primary-btn save-profile" loading="{{savingProfile}}" disabled="{{savingProfile}}" bindtap="saveProfile">
+        <text wx:if="{{savingProfile}}">保存中...</text>
+        <text wx:else>保存个人配置</text>
+      </button>
+    </view>
+
+    <view class="right-col-settings-flex">
+      <view wx:if="{{!loggedIn}}" class="glass-card api-config-card">
+        <view class="panel-title">{{authTitle}}</view>
+        <view class="auth-grid">
+          <input value="{{username}}" data-field="username" bindinput="onAuthInput" placeholder="用户名" />
+          <input password="true" value="{{password}}" data-field="password" bindinput="onAuthInput" placeholder="密码" />
+        </view>
+        <button class="primary-btn auth-btn" loading="{{authLoading}}" disabled="{{authLoading}}" bindtap="submitAuth">
+          <text wx:if="{{authLoading}}">处理中...</text>
+          <text wx:else>{{authButtonText}}</text>
+        </button>
+        <button class="ghost-btn switch-btn" bindtap="switchAuthMode">{{switchAuthText}}</button>
+      </view>
+
+      <view wx:else class="glass-card api-config-card">
+        <view class="panel-title">云端账号状态</view>
+        <view class="cloud-logged-in-notice">
+          <view class="notice-success">已成功连接云端服务器</view>
+          <view class="logged-username">当前登录用户：{{currentUsername}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

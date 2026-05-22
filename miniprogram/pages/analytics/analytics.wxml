@@ -1,0 +1,92 @@
+<view class="page analytics-root safe-bottom">
+  <view wx:if="{{!loggedIn}}" class="panel">
+    <view class="panel-title">登录后查看统计</view>
+    <view class="muted">统计页会读取你服务器里的饮食记录，并结合每日 TDEE 覆盖值计算热量缺口。</view>
+    <button class="primary-btn login-btn" bindtap="goSettings">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="analytics-summary-grid">
+      <view class="glass-card glow-green summary-stat-card">
+        <view class="card-top-icon-row">
+          <text class="summary-icon green">缺</text>
+          <text class="summary-card-badge green">7天</text>
+        </view>
+        <view class="summary-card-title">日均热量缺口</view>
+        <view class="summary-card-value text-success">{{avgDeficit}} <text class="small-unit">kcal</text></view>
+        <view class="summary-card-subtext">基于过去一周实际记录计算</view>
+      </view>
+
+      <view class="glass-card glow-purple summary-stat-card">
+        <view class="card-top-icon-row">
+          <text class="summary-icon purple">餐</text>
+          <text class="summary-card-badge purple">活跃</text>
+        </view>
+        <view class="summary-card-title">活跃记录天数</view>
+        <view class="summary-card-value">{{activeDays}} <text class="small-unit">天</text></view>
+        <view class="summary-card-subtext">有饮食记录的天数</view>
+      </view>
+
+      <view class="glass-card glow-orange summary-stat-card">
+        <view class="card-top-icon-row">
+          <text class="summary-icon orange">热</text>
+          <text class="summary-card-badge orange">摄入</text>
+        </view>
+        <view class="summary-card-title">日均摄入</view>
+        <view class="summary-card-value">{{avgCalories}} <text class="small-unit">kcal</text></view>
+        <view class="summary-card-subtext">只统计有记录的日期</view>
+      </view>
+    </view>
+
+    <view class="glass-card chart-container-card">
+      <view class="chart-header-row">
+        <view class="chart-title">卡路里平衡趋势 (7天)</view>
+        <view class="chart-legend">
+          <text class="legend-item orange-dot">摄入</text>
+          <text class="legend-item green-dot">TDEE</text>
+        </view>
+      </view>
+
+      <view wx:if="{{loading}}" class="empty">加载中...</view>
+      <view wx:elif="{{!hasDays}}" class="empty">暂无统计数据</view>
+      <view wx:else>
+        <view wx:for="{{days}}" wx:key="date" class="day-row">
+          <view class="day-head">
+            <text class="day-date">{{item.label}}</text>
+            <text class="mini-text">{{item.intake}} / {{item.tdee}} kcal</text>
+          </view>
+          <view class="bar-stack">
+            <view class="bar-line">
+              <view class="bar-fill intake-fill" style="width: {{item.intakeWidth}}%;"></view>
+            </view>
+            <view class="bar-line faint-line">
+              <view class="bar-fill tdee-fill" style="width: {{item.tdeeWidth}}%;"></view>
+            </view>
+          </view>
+          <view class="day-foot">
+            <text>{{item.deficitText}}</text>
+            <text>喝水 {{item.water}} ml</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="glass-card macro-ratio-card">
+      <view class="chart-title">膳食宏量营养素比例分析</view>
+      <view class="macro-cards">
+        <view class="macro-card protein">
+          <text>蛋白质</text>
+          <text class="macro-value">{{avgProtein}}g</text>
+        </view>
+        <view class="macro-card carbs">
+          <text>碳水</text>
+          <text class="macro-value">{{avgCarbs}}g</text>
+        </view>
+        <view class="macro-card fat">
+          <text>脂肪</text>
+          <text class="macro-value">{{avgFat}}g</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

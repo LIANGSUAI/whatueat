@@ -1,0 +1,34 @@
+{
+  "name": "WhatUEat - 智能饮食记录",
+  "short_name": "WhatUEat",
+  "description": "AI 拍照识别食物、卡路里缺口计算、每日饮食与营养趋势记录。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fcfaf2",
+  "theme_color": "#fcfaf2",
+  "categories": ["health", "food", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

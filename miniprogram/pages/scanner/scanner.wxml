@@ -1,0 +1,125 @@
+<view class="page safe-bottom">
+  <view class="glass-card scanner-container">
+    <view class="scanner-header">
+      <view class="card-title">AI 饮食拍照记账</view>
+      <view class="scanner-subtitle">上传每餐照片，AI 自动估算卡路里和三大营养素</view>
+    </view>
+
+    <view class="scanner-workspace">
+      <view class="workspace-upload-col">
+        <view wx:if="{{!imagePath}}" class="dropzone-area" bindtap="chooseImage">
+          <view class="dropzone-content">
+            <view class="upload-icon-circle"></view>
+            <view class="upload-prompt">点击选择或拍摄餐食图片</view>
+            <view class="upload-subtext">支持相册与相机，识别前会压缩上传</view>
+            <view class="camera-option-tag">手机相机直接拍照</view>
+          </view>
+        </view>
+
+        <view wx:else class="image-preview-wrapper">
+          <view wx:if="{{scanning}}" class="scan-line"></view>
+          <image class="preview-image-img" src="{{imagePath}}" mode="aspectFill"></image>
+          <view wx:if="{{!scanResult}}" class="preview-actions-overlay">
+            <button class="ghost-btn overlay-btn" bindtap="chooseImage">重选</button>
+            <button class="primary-btn overlay-btn" loading="{{scanning}}" disabled="{{scanning}}" bindtap="scanMeal">
+              <text wx:if="{{scanning}}">识别中</text>
+              <text wx:else>开始 AI 识别</text>
+            </button>
+          </view>
+        </view>
+      </view>
+
+      <view class="workspace-results-col">
+        <view wx:if="{{scanning}}" class="scanning-loader">
+          <view class="radar-scanner-circle"></view>
+          <view class="loader-title">AI 正在分析食物组成...</view>
+          <view class="loader-desc">估算重量、卡路里以及宏量营养素</view>
+        </view>
+
+        <view wx:elif="{{!scanResult}}" class="results-empty-state">
+          <view class="empty-book-art">待分析</view>
+          <view class="empty-title">盘中内容还没有识别</view>
+          <view class="empty-desc">在左侧上传餐食图片后，点击“开始 AI 识别”。</view>
+        </view>
+
+        <view wx:else class="scan-results-card">
+          <view class="results-header-info">
+            <picker range="{{mealTypes}}" range-key="label" value="{{mealTypeIndex}}" bindchange="onTypeChange">
+              <view class="meal-type-selector-input">分类：{{mealTypeLabel}}</view>
+            </picker>
+            <button class="ghost-btn small-btn" bindtap="chooseImage">重拍</button>
+          </view>
+
+          <view class="field meal-title-field">
+            <text class="field-label">食物识别名称</text>
+            <input value="{{editedMeal.name}}" data-field="name" bindinput="onMealInput" />
+          </view>
+
+          <view class="scanned-stats-row">
+            <view class="scanned-stat-box orange">
+              <view class="scanned-stat-val">{{editedMeal.calories}}</view>
+              <view class="scanned-stat-lbl">热量</view>
+            </view>
+            <view class="scanned-stat-box purple">
+              <view class="scanned-stat-val">{{editedMeal.protein}}g</view>
+              <view class="scanned-stat-lbl">蛋白质</view>
+            </view>
+            <view class="scanned-stat-box yellow">
+              <view class="scanned-stat-val">{{editedMeal.carbs}}g</view>
+              <view class="scanned-stat-lbl">碳水</view>
+            </view>
+            <view class="scanned-stat-box danger">
+              <view class="scanned-stat-val">{{editedMeal.fat}}g</view>
+              <view class="scanned-stat-lbl">脂肪</view>
+            </view>
+          </view>
+
+          <view class="result-grid">
+            <view class="field">
+              <text class="field-label">热量 kcal</text>
+              <input type="number" value="{{editedMeal.calories}}" data-field="calories" bindinput="onMealInput" />
+            </view>
+            <view class="field">
+              <text class="field-label">蛋白 g</text>
+              <input type="digit" value="{{editedMeal.protein}}" data-field="protein" bindinput="onMealInput" />
+            </view>
+            <view class="field">
+              <text class="field-label">碳水 g</text>
+              <input type="digit" value="{{editedMeal.carbs}}" data-field="carbs" bindinput="onMealInput" />
+            </view>
+            <view class="field">
+              <text class="field-label">脂肪 g</text>
+              <input type="digit" value="{{editedMeal.fat}}" data-field="fat" bindinput="onMealInput" />
+            </view>
+          </view>
+
+          <view wx:if="{{hasItems}}" class="ingredients-breakdown-section">
+            <view class="ingredients-section-title">食物原料拆解</view>
+            <view class="ingredients-list">
+              <view wx:for="{{editedMeal.items}}" wx:key="name" class="ingredient-item-card">
+                <view class="ingredient-display-row">
+                  <view class="ing-info">
+                    <text class="ing-dot"></text>
+                    <text class="ing-name">{{item.name}}</text>
+                    <text class="ing-weight">({{item.weight}})</text>
+                  </view>
+                  <view class="ing-nutrients">{{item.calories}} kcal · P:{{item.protein}} C:{{item.carbs}} F:{{item.fat}}</view>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <view class="scanned-actions-row">
+            <button class="ghost-btn" bindtap="chooseImage">重新拍摄</button>
+            <button class="primary-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="saveMeal">
+              <text wx:if="{{saving}}">保存中...</text>
+              <text wx:else>保存并打卡</text>
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <canvas type="2d" id="thumbCanvas" class="thumb-canvas"></canvas>
+</view>
