@@ -1,13 +1,13 @@
-const CACHE_NAME = 'whatueat-pwa-v2';
+const CACHE_NAME = 'whatueat-pwa-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
-  '/icons/favicon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/maskable-512.png',
-  '/icons/apple-touch-icon.png'
+  '/manifest.webmanifest?v=20260522',
+  '/icons/favicon.svg?v=20260522',
+  '/icons/icon-192.png?v=20260522',
+  '/icons/icon-512.png?v=20260522',
+  '/icons/maskable-512.png?v=20260522',
+  '/icons/apple-touch-icon.png?v=20260522'
 ];
 
 self.addEventListener('install', (event) => {
