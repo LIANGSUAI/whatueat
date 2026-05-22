@@ -381,6 +381,14 @@ export default function App() {
 
   // 6. Add Meal Log
   const handleAddMeal = async (newMeal) => {
+    const mealName = String(newMeal?.name || '').trim();
+    const mealCalories = Number(newMeal?.calories);
+
+    if (!mealName || !Number.isFinite(mealCalories) || mealCalories <= 0) {
+      alert('请填写餐食名称和有效热量。');
+      return;
+    }
+
     // Merge timestamp with selectedDate if it's a new meal
     const mealTimestamp = newMeal.timestamp 
       ? (() => {
@@ -400,6 +408,12 @@ export default function App() {
     // Generate temporary ID
     const mealWithId = {
       ...newMeal,
+      name: mealName,
+      calories: mealCalories,
+      protein: Number(newMeal.protein || 0),
+      carbs: Number(newMeal.carbs || 0),
+      fat: Number(newMeal.fat || 0),
+      items: Array.isArray(newMeal.items) ? newMeal.items : [],
       timestamp: mealTimestamp,
       id: Date.now().toString()
     };
@@ -418,7 +432,7 @@ export default function App() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiSettings.token}`
           },
-          body: JSON.stringify(newMeal)
+          body: JSON.stringify(mealWithId)
         });
         if (!response.ok) {
           const message = await getApiErrorMessage(
