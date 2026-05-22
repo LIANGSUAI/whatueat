@@ -5,6 +5,21 @@ import { query } from '../db.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'whatueat_jwt_secret_token_key_123';
+const MAX_POSTGRES_INTEGER = 2147483647;
+
+const readNumber = (value, fallback = 0) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : fallback;
+};
+
+const readMealId = (id) => {
+  const mealId = Number(id);
+  if (!Number.isInteger(mealId) || mealId <= 0 || mealId > MAX_POSTGRES_INTEGER) {
+    return null;
+  }
+  return mealId;
+};
 
 // ----------------------------------------------------
 // Authentication Middleware
@@ -177,10 +192,10 @@ router.post('/', authenticateToken, async (req, res) => {
       [
         userId,
         name,
-        Number(calories),
-        Number(protein || 0),
-        Number(carbs || 0),
-        Number(fat || 0),
+        Math.round(readNumber(calories)),
+        readNumber(protein),
+        readNumber(carbs),
+        readNumber(fat),
         JSON.stringify(items || []),
         image || null,
         type || 'Lunch',
@@ -198,9 +213,9 @@ router.post('/', authenticateToken, async (req, res) => {
 // DELETE /api/meals/:id - Delete a meal log
 router.delete('/:id', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const mealId = Number(req.params.id);
+  const mealId = readMealId(req.params.id);
 
-  if (isNaN(mealId)) {
+  if (!mealId) {
     return res.status(400).json({ message: '无效的 ID 参数。' });
   }
 
@@ -220,10 +235,10 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // PUT /api/meals/:id - Update a meal log
 router.put('/:id', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const mealId = Number(req.params.id);
+  const mealId = readMealId(req.params.id);
   const { name, calories, protein, carbs, fat, items, type, timestamp } = req.body;
 
-  if (isNaN(mealId)) {
+  if (!mealId) {
     return res.status(400).json({ message: '无效的 ID 参数。' });
   }
 
@@ -240,10 +255,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
        RETURNING id`,
       [
         name,
-        Number(calories),
-        Number(protein || 0),
-        Number(carbs || 0),
-        Number(fat || 0),
+        Math.round(readNumber(calories)),
+        readNumber(protein),
+        readNumber(carbs),
+        readNumber(fat),
         JSON.stringify(items || []),
         type || 'Lunch',
         mealTime,

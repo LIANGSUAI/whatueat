@@ -1,5 +1,5 @@
 const ENERGY_UNIT_PATTERN = '(?:kcal|KCAL|千卡|大卡|卡路里|kj|kJ|KJ|千焦)';
-const NUMBER_PATTERN = '(\\d+(?:\\.\\d+)?)';
+const NUMBER_PATTERN = '(\\d[\\d,]*(?:\\.\\d+)?)';
 
 export const TEXT_ESTIMATION_SYSTEM_PROMPT = `You are a professional nutrition expert. Analyze the food description text provided and estimate the summary dish name, estimated weight of each ingredient/food item, total calories (kcal), and macronutrients (protein in grams, carbohydrates in grams, fat in grams).
 
@@ -78,20 +78,21 @@ const roundTo = (value, digits = 0) => {
 
 const readNumber = (value, fallback = 0) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const match = String(value ?? '').match(/-?\d+(?:\.\d+)?/);
+  const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
   return match ? Number(match[0]) : fallback;
 };
 
 const energyToKcal = (value, unit) => {
   const normalizedUnit = String(unit || '').toLowerCase();
+  const numericValue = Number(String(value).replace(/,/g, ''));
   if (normalizedUnit === 'kj' || unit === '千焦') {
-    return Number(value) / 4.184;
+    return numericValue / 4.184;
   }
-  return Number(value);
+  return numericValue;
 };
 
 const convertAmountToGrams = (value, unit) => {
-  const numeric = Number(value);
+  const numeric = Number(String(value).replace(/,/g, ''));
   if (!Number.isFinite(numeric)) return null;
   const normalizedUnit = String(unit || '').toLowerCase();
   if (normalizedUnit === 'kg' || unit === '千克' || unit === '公斤') return numeric * 1000;
@@ -118,7 +119,7 @@ const parseEnergyBasis = (inputText) => {
     if (match) {
       return {
         basis: pattern.basis,
-        rawValue: Number(match[1]),
+        rawValue: Number(String(match[1]).replace(/,/g, '')),
         unit: match[2],
         kcal: energyToKcal(match[1], match[2])
       };
@@ -195,8 +196,8 @@ const parseConsumedAmount = (text) => {
 
 const parseMacroValue = (inputText, label) => {
   const text = normalizeText(inputText);
-  const match = text.match(new RegExp(`${label}\\s*:?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:g|克)`, 'i'));
-  return match ? Number(match[1]) : null;
+  const match = text.match(new RegExp(`${label}\\s*:?\\s*(\\d[\\d,]*(?:\\.\\d+)?)\\s*(?:g|克)`, 'i'));
+  return match ? Number(match[1].replace(/,/g, '')) : null;
 };
 
 const pickValue = (source, keys, fallback = undefined) => {

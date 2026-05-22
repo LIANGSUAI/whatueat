@@ -27,6 +27,25 @@ export default function App() {
     return dateObj.toISOString();
   };
 
+  const readNumeric = (value, fallback = 0) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    const match = String(value ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : fallback;
+  };
+
+  const normalizeMealForSave = (meal, timestamp) => ({
+    ...meal,
+    name: String(meal.name || '未命名餐食'),
+    calories: Math.max(0, Math.round(readNumeric(meal.calories))),
+    protein: Math.max(0, readNumeric(meal.protein)),
+    carbs: Math.max(0, readNumeric(meal.carbs)),
+    fat: Math.max(0, readNumeric(meal.fat)),
+    items: Array.isArray(meal.items) ? meal.items : [],
+    timestamp
+  });
+
+  const isTemporaryMealId = (id) => String(id || '').startsWith('temp-') || Number(id) > 2147483647;
+
   // Application States
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [meals, setMeals] = useState([]);
@@ -386,11 +405,11 @@ export default function App() {
         })()
       : getMergedTimestamp(selectedDate);
 
-    // Generate temporary ID
+    const mealToSave = normalizeMealForSave(newMeal, mealTimestamp);
+    const tempId = `temp-${Date.now()}`;
     const mealWithId = {
-      ...newMeal,
-      timestamp: mealTimestamp,
-      id: Date.now().toString()
+      ...mealToSave,
+      id: tempId
     };
 
     const updatedMeals = [mealWithId, ...meals];
@@ -407,11 +426,19 @@ export default function App() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiSettings.token}`
           },
-          body: JSON.stringify(newMeal)
+          body: JSON.stringify(mealToSave)
         });
-        if (!response.ok) throw new Error('云端同步失败');
-        
-        // Re-fetch to get database ID
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`云端同步失败: ${errText || response.status}`);
+        }
+
+        const saved = await response.json();
+        if (saved?.id) {
+          setMeals(currentMeals => currentMeals.map(meal => (
+            meal.id === tempId ? { ...mealToSave, id: saved.id } : meal
+          )));
+        }
         fetchMealsFromServer();
         alert('餐食记录已同步至阿里云数据库！');
       } catch (err) {
@@ -431,6 +458,11 @@ export default function App() {
     if (apiSettings.mode === 'local') {
       localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
     } else if (apiSettings.mode === 'cloud' && apiSettings.isLoggedIn) {
+      if (isTemporaryMealId(mealId)) {
+        localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
+        return;
+      }
+
       try {
         const response = await fetch(`${apiSettings.serverUrl}/api/meals/${mealId}`, {
           method: 'DELETE',
@@ -455,6 +487,12 @@ export default function App() {
       localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
       alert('记录已成功修改！');
     } else if (apiSettings.mode === 'cloud' && apiSettings.isLoggedIn) {
+      if (isTemporaryMealId(updatedMeal.id)) {
+        localStorage.setItem('whatueat-meals', JSON.stringify(updatedMeals));
+        alert('这条记录还没有云端 ID，已暂存在本地。');
+        return;
+      }
+
       try {
         const response = await fetch(`${apiSettings.serverUrl}/api/meals/${updatedMeal.id}`, {
           method: 'PUT',
