@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, Sparkles, Check, Edit3, Save, RefreshCw, AlertCircle } from 'lucide-react';
+import { parseNumeric } from '../utils';
 
 const MOCK_MEALS_DATABASE = [
   {
@@ -270,8 +271,27 @@ Do not return any markdown formatting outside of JSON, do not include any though
         parsedJson = JSON.parse(text);
       }
 
-      setScanResult(parsedJson);
-      setEditedResult(JSON.parse(JSON.stringify(parsedJson)));
+      // Sanitize AI scan result values
+      const cleanResult = {
+        name: parsedJson.name || 'AI 估算餐食',
+        calories: parseNumeric(parsedJson.calories),
+        protein: parseNumeric(parsedJson.protein),
+        carbs: parseNumeric(parsedJson.carbs),
+        fat: parseNumeric(parsedJson.fat),
+        items: Array.isArray(parsedJson.items) 
+          ? parsedJson.items.map(item => ({
+              name: item.name || '',
+              weight: item.weight || '',
+              calories: parseNumeric(item.calories),
+              protein: parseNumeric(item.protein),
+              carbs: parseNumeric(item.carbs),
+              fat: parseNumeric(item.fat)
+            }))
+          : []
+      };
+
+      setScanResult(cleanResult);
+      setEditedResult(JSON.parse(JSON.stringify(cleanResult)));
     } catch (err) {
       console.error(err);
       setError(`识别出错：${err.message || '网络异常，请确认后端服务或API Key设置是否正确。'}`);
@@ -287,10 +307,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
     } else {
       updated.items[index][field] = val;
       // Recalculate totals
-      updated.calories = updated.items.reduce((s, i) => s + Number(i.calories || 0), 0);
-      updated.protein = updated.items.reduce((s, i) => s + Number(i.protein || 0), 0);
-      updated.carbs = updated.items.reduce((s, i) => s + Number(i.carbs || 0), 0);
-      updated.fat = updated.items.reduce((s, i) => s + Number(i.fat || 0), 0);
+      updated.calories = updated.items.reduce((s, i) => s + parseNumeric(i.calories), 0);
+      updated.protein = updated.items.reduce((s, i) => s + parseNumeric(i.protein), 0);
+      updated.carbs = updated.items.reduce((s, i) => s + parseNumeric(i.carbs), 0);
+      updated.fat = updated.items.reduce((s, i) => s + parseNumeric(i.fat), 0);
     }
     setEditedResult(updated);
   };

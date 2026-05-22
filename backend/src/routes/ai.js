@@ -18,6 +18,41 @@ const cleanJsonResponse = (text) => {
   return cleaned.trim();
 };
 
+const parseNumeric = (val, fallback = 0) => {
+  if (val === undefined || val === null || val === '') return fallback;
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? val : fallback;
+  }
+  const clean = String(val).replace(/,/g, '').trim();
+  const match = clean.match(/[-+]?\d+(?:\.\d+)?/);
+  if (match) {
+    const num = Number(match[0]);
+    return Number.isFinite(num) ? num : fallback;
+  }
+  return fallback;
+};
+
+const sanitizeAiResult = (parsedJson) => {
+  if (!parsedJson) return null;
+  return {
+    name: parsedJson.name || 'AI 估算餐食',
+    calories: parseNumeric(parsedJson.calories),
+    protein: parseNumeric(parsedJson.protein),
+    carbs: parseNumeric(parsedJson.carbs),
+    fat: parseNumeric(parsedJson.fat),
+    items: Array.isArray(parsedJson.items) 
+      ? parsedJson.items.map(item => ({
+          name: item.name || '',
+          weight: item.weight || '',
+          calories: parseNumeric(item.calories),
+          protein: parseNumeric(item.protein),
+          carbs: parseNumeric(item.carbs),
+          fat: parseNumeric(item.fat)
+        }))
+      : []
+  };
+};
+
 const fetchWithTimeout = async (url, options = {}, timeoutMs = 30000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -140,7 +175,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
     const cleanContent = cleanJsonResponse(rawContent);
 
     const parsedJson = JSON.parse(cleanContent);
-    return res.json({ result: parsedJson });
+    const sanitizedResult = sanitizeAiResult(parsedJson);
+    return res.json({ result: sanitizedResult });
 
   } catch (err) {
     console.error('AI 识图失败:', err);
@@ -293,7 +329,8 @@ Do not return any markdown formatting outside of JSON, do not include any though
     const cleanContent = cleanJsonResponse(rawContent);
 
     const parsedJson = JSON.parse(cleanContent);
-    return res.json({ result: parsedJson });
+    const sanitizedResult = sanitizeAiResult(parsedJson);
+    return res.json({ result: sanitizedResult });
 
   } catch (err) {
     console.error('AI 文本估算失败:', err);

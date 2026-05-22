@@ -5,8 +5,7 @@ import MealScanner from './components/MealScanner';
 import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import { APP_CONFIG } from './config';
-
-
+import { parseNumeric } from './utils';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -381,10 +380,12 @@ export default function App() {
 
   // 6. Add Meal Log
   const handleAddMeal = async (newMeal) => {
+    console.log('[DEBUG] handleAddMeal raw input:', newMeal);
     const mealName = String(newMeal?.name || '').trim();
-    const mealCalories = Number(newMeal?.calories);
+    const mealCalories = parseNumeric(newMeal?.calories);
+    console.log('[DEBUG] handleAddMeal processed fields:', { mealName, mealCalories });
 
-    if (!mealName || !Number.isFinite(mealCalories) || mealCalories <= 0) {
+    if (!mealName || mealCalories <= 0) {
       alert('请填写餐食名称和有效热量。');
       return;
     }
@@ -410,10 +411,16 @@ export default function App() {
       ...newMeal,
       name: mealName,
       calories: mealCalories,
-      protein: Number(newMeal.protein || 0),
-      carbs: Number(newMeal.carbs || 0),
-      fat: Number(newMeal.fat || 0),
-      items: Array.isArray(newMeal.items) ? newMeal.items : [],
+      protein: parseNumeric(newMeal.protein),
+      carbs: parseNumeric(newMeal.carbs),
+      fat: parseNumeric(newMeal.fat),
+      items: Array.isArray(newMeal.items) ? newMeal.items.map(item => ({
+        ...item,
+        calories: parseNumeric(item.calories),
+        protein: parseNumeric(item.protein),
+        carbs: parseNumeric(item.carbs),
+        fat: parseNumeric(item.fat)
+      })) : [],
       timestamp: mealTimestamp,
       id: Date.now().toString()
     };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Edit2, Flame, TrendingDown, Target, Droplet, Coffee, Utensils, Moon, Carrot, X, ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
+import { parseNumeric } from '../utils';
 
 const COMMON_FOODS = [
   {
@@ -381,6 +382,10 @@ export default function Dashboard({
   const handleEditClick = (meal) => {
     setEditingMeal({
       ...meal,
+      calories: parseNumeric(meal.calories),
+      protein: parseNumeric(meal.protein),
+      carbs: parseNumeric(meal.carbs),
+      fat: parseNumeric(meal.fat),
       selectedFood: '',
       quantity: '1',
       portionIndex: '0'
@@ -509,10 +514,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
         setQuickMeal(prev => ({
           ...prev,
           name: result.name,
-          calories: result.calories.toString(),
-          protein: result.protein.toString(),
-          carbs: result.carbs.toString(),
-          fat: result.fat.toString(),
+          calories: parseNumeric(result.calories).toString(),
+          protein: parseNumeric(result.protein).toString(),
+          carbs: parseNumeric(result.carbs).toString(),
+          fat: parseNumeric(result.fat).toString(),
           type: inferMealTypeFromText(aiText, prev.type),
           selectedFood: ''
         }));
@@ -534,10 +539,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
   const filteredMeals = meals.filter(m => m.timestamp && m.timestamp.split('T')[0] === selectedDate);
 
   // Calculate current totals
-  const totalCalories = filteredMeals.reduce((sum, m) => sum + Number(m.calories || 0), 0);
-  const totalProtein = filteredMeals.reduce((sum, m) => sum + Number(m.protein || 0), 0);
-  const totalCarbs = filteredMeals.reduce((sum, m) => sum + Number(m.carbs || 0), 0);
-  const totalFat = filteredMeals.reduce((sum, m) => sum + Number(m.fat || 0), 0);
+  const totalCalories = filteredMeals.reduce((sum, m) => sum + parseNumeric(m.calories), 0);
+  const totalProtein = filteredMeals.reduce((sum, m) => sum + parseNumeric(m.protein), 0);
+  const totalCarbs = filteredMeals.reduce((sum, m) => sum + parseNumeric(m.carbs), 0);
+  const totalFat = filteredMeals.reduce((sum, m) => sum + parseNumeric(m.fat), 0);
 
   // Macro targets (Carb 50%, Protein 25%, Fat 25% of targetIntake)
   const targetProteinGrams = Math.round((targetIntake * 0.25) / 4);
@@ -559,10 +564,10 @@ Do not return any markdown formatting outside of JSON, do not include any though
     if (!quickMeal.name || !quickMeal.calories) return;
     onAddManualMeal({
       ...quickMeal,
-      calories: Number(quickMeal.calories),
-      protein: Number(quickMeal.protein || 0),
-      carbs: Number(quickMeal.carbs || 0),
-      fat: Number(quickMeal.fat || 0),
+      calories: parseNumeric(quickMeal.calories),
+      protein: parseNumeric(quickMeal.protein),
+      carbs: parseNumeric(quickMeal.carbs),
+      fat: parseNumeric(quickMeal.fat),
       timestamp: new Date().toISOString()
     });
     setQuickMeal({ 
