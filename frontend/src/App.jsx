@@ -31,6 +31,7 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [meals, setMeals] = useState([]);
   const [waterLogs, setWaterLogs] = useState({});
+  const [dailyTdeeLogs, setDailyTdeeLogs] = useState({});
   const [weightLogs, setWeightLogs] = useState([]);
   const [userProfile, setUserProfile] = useState({
     gender: 'male',
@@ -93,6 +94,7 @@ export default function App() {
     const profileKey = username ? `whatueat-profile-${username}` : 'whatueat-profile';
     const weightKey = username ? `whatueat-weight-logs-${username}` : 'whatueat-weight-logs';
     const waterLogsKey = username ? `whatueat-water-logs-${username}` : 'whatueat-water-logs';
+    const dailyTdeeLogsKey = username ? `whatueat-daily-tdee-${username}` : 'whatueat-daily-tdee';
 
     // Load Profile
     const savedProfile = localStorage.getItem(profileKey);
@@ -129,6 +131,18 @@ export default function App() {
       }
     } else {
       setWaterLogs({});
+    }
+
+    const savedDailyTdeeLogs = localStorage.getItem(dailyTdeeLogsKey);
+    if (savedDailyTdeeLogs) {
+      try {
+        setDailyTdeeLogs(JSON.parse(savedDailyTdeeLogs));
+      } catch (e) {
+        console.error('Failed to parse daily TDEE logs:', e);
+        setDailyTdeeLogs({});
+      }
+    } else {
+      setDailyTdeeLogs({});
     }
 
     // Load Meals (Local vs Cloud)
@@ -234,6 +248,17 @@ export default function App() {
         setWaterLogs({});
       }
 
+      const savedDailyTdeeLogs = localStorage.getItem(`whatueat-daily-tdee-${username}`);
+      if (savedDailyTdeeLogs) {
+        try {
+          setDailyTdeeLogs(JSON.parse(savedDailyTdeeLogs));
+        } catch (e) {
+          setDailyTdeeLogs({});
+        }
+      } else {
+        setDailyTdeeLogs({});
+      }
+
       // Load User Meals from Cloud
       if (newApi.mode === 'cloud' && newApi.token) {
         fetchMealsFromServer(newApi.serverUrl, newApi.token);
@@ -270,6 +295,17 @@ export default function App() {
         }
       } else {
         setWaterLogs({});
+      }
+
+      const savedDailyTdeeLogs = localStorage.getItem('whatueat-daily-tdee');
+      if (savedDailyTdeeLogs) {
+        try {
+          setDailyTdeeLogs(JSON.parse(savedDailyTdeeLogs));
+        } catch (e) {
+          setDailyTdeeLogs({});
+        }
+      } else {
+        setDailyTdeeLogs({});
       }
 
       // Reload local meals or clear meals
@@ -450,6 +486,23 @@ export default function App() {
     const username = apiSettings.isLoggedIn ? apiSettings.username : '';
     const waterLogsKey = username ? `whatueat-water-logs-${username}` : 'whatueat-water-logs';
     localStorage.setItem(waterLogsKey, JSON.stringify(updatedWaterLogs));
+  };
+
+  const handleUpdateDailyTdee = (dateStr, value) => {
+    const updatedLogs = { ...dailyTdeeLogs };
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      delete updatedLogs[dateStr];
+    } else {
+      updatedLogs[dateStr] = Math.round(parsed);
+    }
+
+    setDailyTdeeLogs(updatedLogs);
+
+    const username = apiSettings.isLoggedIn ? apiSettings.username : '';
+    const dailyTdeeLogsKey = username ? `whatueat-daily-tdee-${username}` : 'whatueat-daily-tdee';
+    localStorage.setItem(dailyTdeeLogsKey, JSON.stringify(updatedLogs));
   };
 
   // 9. Weight Logger
@@ -722,7 +775,10 @@ export default function App() {
             onDeleteMeal={handleDeleteMeal}
             onUpdateMeal={handleUpdateMeal}
             onAddManualMeal={handleAddMeal}
-            tdee={userProfile.tdee}
+            tdee={dailyTdeeLogs[selectedDate] || userProfile.tdee}
+            defaultTdee={userProfile.tdee}
+            dailyTdeeOverride={dailyTdeeLogs[selectedDate]}
+            onUpdateDailyTdee={handleUpdateDailyTdee}
             targetDeficit={userProfile.deficit}
             waterIntake={waterLogs[selectedDate] || 0}
             onUpdateWater={handleUpdateWater}
@@ -745,6 +801,7 @@ export default function App() {
             weightLogs={weightLogs}
             userProfile={userProfile}
             waterLogs={waterLogs}
+            dailyTdeeLogs={dailyTdeeLogs}
           />
         )}
 

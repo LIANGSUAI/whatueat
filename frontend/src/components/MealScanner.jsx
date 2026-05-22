@@ -77,6 +77,25 @@ const createMealThumbnail = (source, maxSize = 320, quality = 0.65) => {
   });
 };
 
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 30000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('AI 识别服务超时，请检查您的网络连接并重试。');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export default function MealScanner({ 
   onSaveMeal, 
   apiSettings 
@@ -181,14 +200,14 @@ export default function MealScanner({
       if (apiSettings.mode === 'cloud') {
         // Cloud API endpoint
         const serverUrl = apiSettings.serverUrl || 'http://localhost:3000';
-        response = await fetch(`${serverUrl}/api/ai/scan`, {
+        response = await fetchWithTimeout(`${serverUrl}/api/ai/scan`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiSettings.token || ''}`
           },
           body: JSON.stringify({ image: base64Data })
-        });
+        }, 30000);
       } else {
         // Direct local client-side fetch (either Qwen-VL or OpenAI proxy)
         const isQwen = apiSettings.provider === 'qwen';
@@ -216,7 +235,7 @@ Return strictly a valid JSON object in this format:
 Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
 
         const requestBody = {
-          model: isQwen ? 'qwen-vl-plus' : 'gpt-4o-mini',
+          model: isQwen ? 'qwen3.5-omni-flash' : 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
             {
@@ -230,11 +249,11 @@ Do not return any markdown formatting outside of JSON, do not include any though
           response_format: { type: 'json_object' }
         };
 
-        response = await fetch(url, {
+        response = await fetchWithTimeout(url, {
           method: 'POST',
           headers,
           body: JSON.stringify(requestBody)
-        });
+        }, 30000);
       }
 
       if (!response.ok) {

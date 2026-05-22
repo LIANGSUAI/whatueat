@@ -2,6 +2,8 @@ import express from 'express';
 
 const router = express.Router();
 
+const DEFAULT_DASHSCOPE_OMNI_MODEL = 'qwen3.5-omni-flash';
+
 // Helper function to clean markdown formatting from LLM JSON responses
 const cleanJsonResponse = (text) => {
   let cleaned = text.trim();
@@ -16,6 +18,25 @@ const cleanJsonResponse = (text) => {
   return cleaned.trim();
 };
 
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 30000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error(`AI 请求超时 (${timeoutMs / 1000} 秒)，请检查您的网络连接或 API 额度。`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 router.post('/scan', async (req, res) => {
   try {
     const { image } = req.body;
@@ -24,6 +45,7 @@ router.post('/scan', async (req, res) => {
     }
 
     const dashscopeKey = process.env.DASHSCOPE_API_KEY;
+    const dashscopeVisionModel = process.env.DASHSCOPE_VISION_MODEL || DEFAULT_DASHSCOPE_OMNI_MODEL;
     const aiApiKey = process.env.AI_API_KEY;
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
@@ -49,12 +71,12 @@ Do not return any markdown formatting outside of JSON, do not include any though
     };
 
     if (dashscopeKey) {
-      // 1. Prioritize Alibaba Cloud Qwen-VL (Domestic direct)
+      // 1. Prioritize Alibaba Cloud Qwen Omni (Domestic direct)
       url = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
       headers['Authorization'] = `Bearer ${dashscopeKey}`;
       
       requestBody = {
-        model: 'qwen-vl-plus',
+        model: dashscopeVisionModel,
         messages: [
           {
             role: 'user',
@@ -102,11 +124,11 @@ Do not return any markdown formatting outside of JSON, do not include any though
     }
 
     // Call external AI API
-    const apiResponse = await fetch(url, {
+    const apiResponse = await fetchWithTimeout(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody)
-    });
+    }, 30000);
 
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text();
@@ -138,6 +160,7 @@ router.post('/estimate-text', async (req, res) => {
     }
 
     const dashscopeKey = process.env.DASHSCOPE_API_KEY;
+    const dashscopeTextModel = process.env.DASHSCOPE_TEXT_MODEL || DEFAULT_DASHSCOPE_OMNI_MODEL;
     const aiApiKey = process.env.AI_API_KEY;
     const aiBaseUrl = process.env.AI_BASE_URL || 'https://api.openai.com/v1';
 
@@ -163,12 +186,12 @@ Do not return any markdown formatting outside of JSON, do not include any though
     };
 
     if (dashscopeKey) {
-      // Use Qwen text compatibility API
+      // Use Qwen Omni text compatibility API
       url = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
       headers['Authorization'] = `Bearer ${dashscopeKey}`;
       
       requestBody = {
-        model: 'qwen-plus',
+        model: dashscopeTextModel,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text }
@@ -254,11 +277,11 @@ Do not return any markdown formatting outside of JSON, do not include any though
       return res.json({ result: { name, calories, protein, carbs, fat, items } });
     }
 
-    const apiResponse = await fetch(url, {
+    const apiResponse = await fetchWithTimeout(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody)
-    });
+    }, 15000);
 
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text();

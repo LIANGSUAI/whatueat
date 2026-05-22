@@ -24,7 +24,7 @@ const getRecordDate = (record) => {
   return typeof record.date === 'string' ? record.date : '';
 };
 
-export default function Analytics({ meals: initialMeals = [], weightLogs: initialWeightLogs = [], userProfile: initialUserProfile = {}, waterLogs: initialWaterLogs = {} }) {
+export default function Analytics({ meals: initialMeals = [], weightLogs: initialWeightLogs = [], userProfile: initialUserProfile = {}, waterLogs: initialWaterLogs = {}, dailyTdeeLogs: initialDailyTdeeLogs = {} }) {
   const [expandedDay, setExpandedDay] = useState(null);
 
   const handleToggleDay = (dateStr) => {
@@ -35,6 +35,7 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
   const weightLogs = Array.isArray(initialWeightLogs) ? initialWeightLogs : [];
   const userProfile = initialUserProfile || {};
   const waterLogs = initialWaterLogs || {};
+  const dailyTdeeLogs = initialDailyTdeeLogs || {};
   const profileTdee = toFiniteNumber(userProfile?.tdee, 2200);
   const profileWeight = toFiniteNumber(userProfile?.weight, 70);
 
@@ -105,13 +106,15 @@ export default function Analytics({ meals: initialMeals = [], weightLogs: initia
         dayName = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
       }
 
+      const dayTdee = toFiniteNumber(dailyTdeeLogs[fullDateStr], profileTdee);
+
       list.push({
         fullDate: fullDateStr,
         date: dateStr,
         dayName: dayName,
         intake: 0,
-        tdee: profileTdee,
-        deficit: profileTdee,
+        tdee: dayTdee,
+        deficit: dayTdee,
         weight: profileWeight,
         water: 0
       });

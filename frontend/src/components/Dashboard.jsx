@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Edit2, Flame, TrendingDown, Target, Droplet, Coffee, Utensils, Moon, Carrot, X, ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
 
 const COMMON_FOODS = [
@@ -153,6 +153,9 @@ export default function Dashboard({
   onUpdateMeal,
   onAddManualMeal,
   tdee = 2200, 
+  defaultTdee = 2200,
+  dailyTdeeOverride,
+  onUpdateDailyTdee,
   targetDeficit = 500, 
   waterIntake = 0,
   onUpdateWater,
@@ -185,6 +188,12 @@ export default function Dashboard({
   const [aiText, setAiText] = useState('');
   const [aiEstimating, setAiEstimating] = useState(false);
   const [aiError, setAiError] = useState('');
+  const [dailyTdeeDraft, setDailyTdeeDraft] = useState(String(tdee));
+  const hasDailyTdeeOverride = dailyTdeeOverride !== undefined && dailyTdeeOverride !== null;
+
+  useEffect(() => {
+    setDailyTdeeDraft(String(tdee));
+  }, [selectedDate, tdee]);
 
   // Calculate targets
   const targetIntake = Math.max(1200, tdee - targetDeficit);
@@ -210,6 +219,27 @@ export default function Dashboard({
 
   const handleGoToday = () => {
     setSelectedDate(getLocalDateString());
+  };
+
+  const handleDailyTdeeChange = (e) => {
+    const value = e.target.value;
+    setDailyTdeeDraft(value);
+
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 800 && parsed <= 6000) {
+      onUpdateDailyTdee?.(selectedDate, parsed);
+    }
+  };
+
+  const handleDailyTdeeBlur = () => {
+    const parsed = Number(dailyTdeeDraft);
+    if (!Number.isFinite(parsed) || parsed < 800 || parsed > 6000) {
+      setDailyTdeeDraft(String(tdee));
+    }
+  };
+
+  const handleResetDailyTdee = () => {
+    onUpdateDailyTdee?.(selectedDate, null);
   };
 
   const formatSelectedDate = (dateStr) => {
@@ -393,14 +423,19 @@ export default function Dashboard({
       let result;
       if (apiSettings?.mode === 'cloud') {
         const serverUrl = apiSettings.serverUrl || 'http://localhost:3000';
-        const response = await fetchWithTimeout(`${serverUrl}/api/ai/estimate-text`, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+        
+        const response = await fetch(`${serverUrl}/api/ai/estimate-text`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiSettings.token || ''}`
           },
-          body: JSON.stringify({ text: aiText })
+          body: JSON.stringify({ text: aiText }),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
         if (!response.ok) {
           const errText = await response.text();
           throw new Error(`分析失败: ${response.status} - ${errText}`);
@@ -433,7 +468,7 @@ Return strictly a valid JSON object in this format:
 Do not return any markdown formatting outside of JSON, do not include any thoughts. Just clean raw JSON.`;
 
         const requestBody = {
-          model: isQwen ? 'qwen-plus' : 'gpt-4o-mini',
+          model: isQwen ? 'qwen3.5-omni-flash' : 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: aiText }
@@ -444,11 +479,16 @@ Do not return any markdown formatting outside of JSON, do not include any though
           requestBody.response_format = { type: 'json_object' };
         }
 
-        const apiResponse = await fetchWithTimeout(url, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+
+        const apiResponse = await fetch(url, {
           method: 'POST',
           headers,
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify(requestBody),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (!apiResponse.ok) {
           throw new Error(`AI 接口返回异常: ${apiResponse.status}`);
@@ -480,7 +520,11 @@ Do not return any markdown formatting outside of JSON, do not include any though
       }
     } catch (err) {
       console.error(err);
-      setAiError(err.message || 'AI 估算请求失败，请稍后重试或使用手动记录。');
+      if (err.name === 'AbortError') {
+        setAiError('AI 估算请求超时，请检查您的网络连接或服务端 API 设置。');
+      } else {
+        setAiError(err.message || 'AI 估算请求失败，请稍后重试或使用手动记录。');
+      }
     } finally {
       setAiEstimating(false);
     }
@@ -554,6 +598,24 @@ Do not return any markdown formatting outside of JSON, do not include any though
           <span className="date-display-text">{formatSelectedDate(selectedDate)}</span>
         </div>
         <div className="date-nav-controls">
+          <div className={`daily-tdee-control ${hasDailyTdeeOverride ? 'custom' : ''}`}>
+            <label>当日 TDEE</label>
+            <input
+              type="number"
+              min="800"
+              max="6000"
+              step="10"
+              value={dailyTdeeDraft}
+              onChange={handleDailyTdeeChange}
+              onBlur={handleDailyTdeeBlur}
+              title={`默认 TDEE: ${defaultTdee} kcal`}
+            />
+            {hasDailyTdeeOverride && (
+              <button type="button" onClick={handleResetDailyTdee} title={`恢复默认 ${defaultTdee} kcal`}>
+                默认
+              </button>
+            )}
+          </div>
           {selectedDate !== getLocalDateString() && (
             <button className="btn btn-secondary btn-sm date-today-btn" onClick={handleGoToday}>
               回到今天
@@ -1689,6 +1751,48 @@ Do not return any markdown formatting outside of JSON, do not include any though
           align-items: center;
           gap: 0.75rem;
         }
+        .daily-tdee-control {
+          display: grid;
+          grid-template-columns: auto 82px auto;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.2rem 0.25rem 0.2rem 0.55rem;
+          border: 1px solid var(--border-glass);
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .daily-tdee-control.custom {
+          border-color: rgba(43, 164, 113, 0.35);
+          background: rgba(43, 164, 113, 0.08);
+        }
+        .daily-tdee-control label {
+          color: var(--text-secondary);
+          font-size: 0.72rem;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+        .daily-tdee-control input {
+          width: 82px;
+          height: 28px;
+          border-radius: 7px;
+          border: 1px solid rgba(92, 102, 122, 0.28);
+          background: var(--bg-input);
+          color: var(--text-primary);
+          padding: 0 0.4rem;
+          font-size: 0.78rem;
+          outline: none;
+        }
+        .daily-tdee-control button {
+          height: 28px;
+          border: none;
+          border-radius: 7px;
+          padding: 0 0.45rem;
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--text-secondary);
+          cursor: pointer;
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
         .date-today-btn {
           font-size: 0.75rem;
           padding: 0.35rem 0.75rem;
@@ -1769,9 +1873,12 @@ Do not return any markdown formatting outside of JSON, do not include any though
 
         @media (max-width: 768px) {
           .date-navigator-card {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
             padding: 0.5rem 0.75rem;
             margin-bottom: 0.75rem;
             border-radius: 12px;
+            gap: 0.45rem;
           }
           .date-display-text {
             font-size: 0.85rem;
@@ -1783,6 +1890,19 @@ Do not return any markdown formatting outside of JSON, do not include any though
           .date-nav-arrow-btn svg {
             width: 16px;
             height: 16px;
+          }
+          .date-nav-controls {
+            grid-column: 1 / -1;
+            width: 100%;
+            justify-content: space-between;
+            gap: 0.45rem;
+          }
+          .daily-tdee-control {
+            flex: 1;
+            grid-template-columns: auto minmax(72px, 1fr) auto;
+          }
+          .daily-tdee-control input {
+            width: 100%;
           }
           .food-converter-row.has-portions {
             grid-template-columns: 1.4fr 0.8fr 1fr !important;
