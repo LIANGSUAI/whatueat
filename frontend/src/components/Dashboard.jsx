@@ -590,26 +590,38 @@ Do not return any markdown formatting outside of JSON, do not include any though
     <div className="dashboard-root">
       {/* Date Navigator Card */}
       <div className="glass-card date-navigator-card animate-fadeIn">
-        <button className="date-nav-arrow-btn" onClick={handlePrevDay} title="前一天">
-          <ChevronLeft size={20} />
-        </button>
-        <div className="date-display-box">
-          <Calendar size={18} className="calendar-decor-icon" />
-          <span className="date-display-text">{formatSelectedDate(selectedDate)}</span>
+        <div className="date-nav-main">
+          <button className="date-nav-arrow-btn" onClick={handlePrevDay} title="前一天">
+            <ChevronLeft size={20} />
+          </button>
+          <div className="date-display-box">
+            <Calendar size={18} className="calendar-decor-icon" />
+            <div className="date-display-copy">
+              <span className="date-display-text">{formatSelectedDate(selectedDate)}</span>
+              <span className="date-display-subtext">{selectedDate}</span>
+            </div>
+          </div>
+          <button className="date-nav-arrow-btn" onClick={handleNextDay} title="后一天">
+            <ChevronRight size={20} />
+          </button>
         </div>
-        <div className="date-nav-controls">
+
+        <div className="date-nav-tools">
           <div className={`daily-tdee-control ${hasDailyTdeeOverride ? 'custom' : ''}`}>
-            <label>当日 TDEE</label>
-            <input
-              type="number"
-              min="800"
-              max="6000"
-              step="10"
-              value={dailyTdeeDraft}
-              onChange={handleDailyTdeeChange}
-              onBlur={handleDailyTdeeBlur}
-              title={`默认 TDEE: ${defaultTdee} kcal`}
-            />
+            <span className="daily-tdee-label">当日消耗</span>
+            <div className="daily-tdee-input-wrap">
+              <input
+                type="number"
+                min="800"
+                max="6000"
+                step="10"
+                value={dailyTdeeDraft}
+                onChange={handleDailyTdeeChange}
+                onBlur={handleDailyTdeeBlur}
+                title={`默认 TDEE: ${defaultTdee} kcal`}
+              />
+              <span>kcal</span>
+            </div>
             {hasDailyTdeeOverride && (
               <button type="button" onClick={handleResetDailyTdee} title={`恢复默认 ${defaultTdee} kcal`}>
                 默认
@@ -621,9 +633,6 @@ Do not return any markdown formatting outside of JSON, do not include any though
               回到今天
             </button>
           )}
-          <button className="date-nav-arrow-btn" onClick={handleNextDay} title="后一天">
-            <ChevronRight size={20} />
-          </button>
         </div>
       </div>
 
@@ -1704,37 +1713,66 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
 
         .date-navigator-card {
-          display: flex;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
           align-items: center;
-          justify-content: space-between;
-          padding: 0.75rem 1.25rem;
+          gap: 0.75rem;
+          padding: 0.65rem;
           margin-bottom: 1.25rem;
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid var(--border-glass);
           border-radius: var(--border-radius-md);
         }
-        .date-display-box {
-          display: flex;
+        .date-nav-main {
+          display: grid;
+          grid-template-columns: 38px minmax(0, 1fr) 38px;
           align-items: center;
           gap: 0.5rem;
-          cursor: pointer;
+          min-width: 0;
+          padding: 0.35rem;
+          border: 1px solid var(--border-glass);
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.04);
+        }
+        .date-display-box {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 0.5rem;
+          min-width: 0;
+          text-align: center;
         }
         .calendar-decor-icon {
           color: var(--color-info);
+          flex: 0 0 auto;
+        }
+        .date-display-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 0.05rem;
+          min-width: 0;
         }
         .date-display-text {
           font-family: var(--font-heading);
           font-weight: 700;
-          font-size: 1rem;
+          font-size: 1.02rem;
           color: var(--text-primary);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .date-display-subtext {
+          font-size: 0.68rem;
+          color: var(--text-muted);
+          font-family: var(--font-heading);
         }
         .date-nav-arrow-btn {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.06);
           border: 1px solid var(--border-glass);
           color: var(--text-primary);
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1744,48 +1782,65 @@ Do not return any markdown formatting outside of JSON, do not include any though
         .date-nav-arrow-btn:hover {
           background: rgba(255, 255, 255, 0.1);
           color: var(--color-info);
-          transform: scale(1.05);
+          transform: translateY(-1px);
         }
-        .date-nav-controls {
+        .date-nav-tools {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          justify-content: flex-end;
+          gap: 0.5rem;
+          min-width: max-content;
         }
         .daily-tdee-control {
           display: grid;
-          grid-template-columns: auto 82px auto;
+          grid-template-columns: auto auto auto;
           align-items: center;
-          gap: 0.35rem;
-          padding: 0.2rem 0.25rem 0.2rem 0.55rem;
+          gap: 0.45rem;
+          min-height: 48px;
+          padding: 0.35rem 0.45rem 0.35rem 0.7rem;
           border: 1px solid var(--border-glass);
-          border-radius: 10px;
+          border-radius: 14px;
           background: rgba(255, 255, 255, 0.04);
         }
         .daily-tdee-control.custom {
           border-color: rgba(43, 164, 113, 0.35);
           background: rgba(43, 164, 113, 0.08);
         }
-        .daily-tdee-control label {
+        .daily-tdee-label {
           color: var(--text-secondary);
           font-size: 0.72rem;
           font-weight: 700;
           white-space: nowrap;
         }
-        .daily-tdee-control input {
-          width: 82px;
-          height: 28px;
-          border-radius: 7px;
+        .daily-tdee-input-wrap {
+          display: grid;
+          grid-template-columns: 70px auto;
+          align-items: center;
+          gap: 0.2rem;
+          height: 30px;
+          padding: 0 0.45rem;
+          border-radius: 8px;
           border: 1px solid rgba(92, 102, 122, 0.28);
           background: var(--bg-input);
+        }
+        .daily-tdee-input-wrap input {
+          width: 70px;
+          border: none;
+          background: transparent;
           color: var(--text-primary);
-          padding: 0 0.4rem;
           font-size: 0.78rem;
+          font-weight: 700;
           outline: none;
         }
+        .daily-tdee-input-wrap span {
+          color: var(--text-muted);
+          font-size: 0.68rem;
+          font-weight: 700;
+        }
         .daily-tdee-control button {
-          height: 28px;
+          height: 30px;
           border: none;
-          border-radius: 7px;
+          border-radius: 8px;
           padding: 0 0.45rem;
           background: rgba(255, 255, 255, 0.08);
           color: var(--text-secondary);
@@ -1795,7 +1850,9 @@ Do not return any markdown formatting outside of JSON, do not include any though
         }
         .date-today-btn {
           font-size: 0.75rem;
-          padding: 0.35rem 0.75rem;
+          min-height: 48px;
+          padding: 0.35rem 0.85rem;
+          border-radius: 14px;
         }
 
         .ai-text-estimator-block {
@@ -1874,35 +1931,51 @@ Do not return any markdown formatting outside of JSON, do not include any though
         @media (max-width: 768px) {
           .date-navigator-card {
             display: grid;
-            grid-template-columns: auto minmax(0, 1fr) auto;
+            grid-template-columns: 1fr;
             padding: 0.5rem 0.75rem;
             margin-bottom: 0.75rem;
             border-radius: 12px;
-            gap: 0.45rem;
+            gap: 0.5rem;
+          }
+          .date-nav-main {
+            grid-template-columns: 32px minmax(0, 1fr) 32px;
+            gap: 0.35rem;
+            padding: 0.3rem;
           }
           .date-display-text {
             font-size: 0.85rem;
           }
           .date-nav-arrow-btn {
-            width: 30px;
-            height: 30px;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
           }
           .date-nav-arrow-btn svg {
             width: 16px;
             height: 16px;
           }
-          .date-nav-controls {
-            grid-column: 1 / -1;
+          .date-nav-tools {
             width: 100%;
             justify-content: space-between;
             gap: 0.45rem;
+            min-width: 0;
           }
           .daily-tdee-control {
             flex: 1;
-            grid-template-columns: auto minmax(72px, 1fr) auto;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            min-height: 42px;
+            padding: 0.3rem 0.4rem 0.3rem 0.55rem;
           }
-          .daily-tdee-control input {
+          .daily-tdee-input-wrap {
+            grid-template-columns: minmax(56px, 1fr) auto;
             width: 100%;
+          }
+          .daily-tdee-input-wrap input {
+            width: 100%;
+          }
+          .date-today-btn {
+            min-height: 42px;
+            padding: 0.3rem 0.65rem;
           }
           .food-converter-row.has-portions {
             grid-template-columns: 1.4fr 0.8fr 1fr !important;
