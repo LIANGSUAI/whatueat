@@ -191,7 +191,7 @@ router.post('/', authenticateToken, async (req, res) => {
       [
         userId,
         name,
-        parseNumeric(calories),
+        Math.round(parseNumeric(calories)),
         parseNumeric(protein),
         parseNumeric(carbs),
         parseNumeric(fat),
@@ -266,7 +266,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
        RETURNING id`,
       [
         name,
-        parseNumeric(calories),
+        Math.round(parseNumeric(calories)),
         parseNumeric(protein),
         parseNumeric(carbs),
         parseNumeric(fat),
